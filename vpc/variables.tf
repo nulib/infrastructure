@@ -39,5 +39,8 @@ variable "stack_name" {
 
 variable "tags" {
   type    = map(string)
-  default = {}
+  default = {
+    Project     = "Infrastructure"
+    Terraform   = "true"
+  }
 }

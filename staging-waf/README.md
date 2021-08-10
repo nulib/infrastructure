@@ -22,7 +22,7 @@ data "terraform_remote_state" "staging_waf" {
   config {
     bucket = "nulterra-state-sandbox"
     key    = "env:/${terraform.workspace}/staging-waf.tfstate"
-    region = "${var.aws_region}"
+    region = var.aws_region
   }
 }
 ```

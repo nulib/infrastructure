@@ -20,6 +20,15 @@ output "public_subnets" {
   value = var.public_subnets
 }
 
+output "stack" {
+  value = {
+    environment   = local.environment
+    name          = var.stack_name
+    namespace     = local.namespace
+    tags          = var.tags
+  }
+}
+
 output "vpc_id" {
   value = module.vpc.vpc_id
 }
