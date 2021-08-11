@@ -1,14 +1,10 @@
-data "aws_iam_policy" "ecs_exec_command" {
-  name = "allow-ecs-exec"
-}
-
 resource "aws_iam_role" "zookeeper_task_role" {
   name               = "zookeeper"
   assume_role_policy = data.aws_iam_policy_document.ecs_assume_role.json
   tags               = local.tags
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_exec_command" {
+resource "aws_iam_role_policy_attachment" "zookeeper_exec_command" {
   role       = aws_iam_role.zookeeper_task_role.id
   policy_arn = data.aws_iam_policy.ecs_exec_command.arn
 }
@@ -35,7 +31,6 @@ resource "aws_security_group_rule" "zookeeper_service_ingress" {
     2181 = aws_security_group.zookeeper_client.id
     2888 = aws_security_group.zookeeper_service.id
     3888 = aws_security_group.zookeeper_service.id
-    8080 = aws_security_group.zookeeper_client.id
   }
 
   security_group_id        = aws_security_group.zookeeper_service.id
@@ -44,6 +39,15 @@ resource "aws_security_group_rule" "zookeeper_service_ingress" {
   to_port                  = each.key
   protocol                 = "tcp"
   source_security_group_id = each.value
+}
+
+resource "aws_security_group_rule" "zookeeper_service_admin_ingress" {
+  security_group_id  = aws_security_group.zookeeper_service.id
+  type               = "ingress"
+  from_port          = 8080
+  to_port            = 8080
+  protocol           = "tcp"
+  cidr_blocks        = [local.vpc.cidr_block]
 }
 
 resource "aws_security_group" "zookeeper_client" {
@@ -149,7 +153,7 @@ resource "aws_ecs_service" "zookeeper" {
   }
 
   service_registries {
-    registry_arn = "${aws_service_discovery_service.zookeeper.*.arn[count.index]}"
+    registry_arn = aws_service_discovery_service.zookeeper.*.arn[count.index]
   }
 
   tags = local.tags

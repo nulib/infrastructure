@@ -65,3 +65,7 @@ resource "aws_cloudwatch_log_group" "solrcloud_logs" {
   name = "/ecs/solrcloud"
   tags = local.tags
 }
+
+data "aws_iam_policy" "ecs_exec_command" {
+  name = "allow-ecs-exec"
+}
