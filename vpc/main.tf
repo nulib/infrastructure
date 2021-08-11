@@ -58,6 +58,28 @@ resource "aws_security_group" "endpoint_access" {
   tags = local.tags
 }
 
+resource "aws_security_group" "internal_http" {
+  name        = "${local.namespace}-exhibitor-lb"
+  description = "Local VPC HTTP Security Group"
+  vpc_id      = module.vpc.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.cidr_block]
+  }
+
+  tags = local.tags
+}
+
 module "endpoints" {
   source = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
 
@@ -127,4 +149,11 @@ resource "aws_route53_record" "public_zone" {
   name    = aws_route53_zone.public_zone.name
   records = aws_route53_zone.public_zone.name_servers
   ttl     = 300
+}
+
+resource "aws_service_discovery_private_dns_namespace" "private_service_discovery" {
+  name        = "internal.${var.hosted_zone_name}"
+  description = "Service Discovery for ${var.stack_name}"
+  vpc         = module.vpc.vpc_id
+  tags        = local.tags
 }
