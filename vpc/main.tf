@@ -157,3 +157,13 @@ resource "aws_service_discovery_private_dns_namespace" "private_service_discover
   vpc         = module.vpc.vpc_id
   tags        = local.tags
 }
+
+data "aws_security_group" "bastion" {
+  name = "${local.namespace}-bastion"
+}
+data "aws_instance" "bastion" {
+  filter {
+    name   = "tag:Name"
+    values = ["${local.namespace}-bastion"]
+  }  
+}

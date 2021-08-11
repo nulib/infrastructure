@@ -1,3 +1,9 @@
+output "bastion" {
+  value = {
+    instance = data.aws_instance.bastion.id
+    security_group = data.aws_security_group.bastion.id
+  }
+}
 output "cidr_block" {
   value = var.cidr_block
 }

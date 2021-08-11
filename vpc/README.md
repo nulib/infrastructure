@@ -16,17 +16,25 @@ This terraform project includes the Virtual Private Cloud (VPC) resources common
 
 ## Outputs
 
+* `bastion.instance` - The ID of the bastion host EC2 instance
+* `bastion.security_group` - The ID of the bastion host security group
+* `cidr_block` - The CIDR block of the VPC
+* `http_security_group_id` - The ID of the shared HTTP security group that allows HTTP access to the entire VPC
 * `private_dns_zone.id` - The ID of the private Route53 DNS zone
-* `private_dns_zone.name` - The name of the private Route54 DNS zone
+* `private_dns_zone.name` - The name of the private Route53 DNS zone
 * `private_subnets` - The list of private subnets in the VPC
+* `private_subnet_ids` - The list of IDs of private subnets in the VPC
 * `public_dns_zone.id` - The ID of the public Route53 DNS zone
-* `public_dns_zone.name` - The name of the public Route54 DNS zone
+* `public_dns_zone.name` - The name of the public Route53 DNS zone
 * `public_subnets` - The list of public subnets in the VPC
+* `public_subnet_ids` - The list of IDs of public subnets in the VPC
+* `service_discovery_dns_zone.id` - The ID of the internal Cloud Map DNS zone
+* `service_discovery_dns_zone.name` - The name of the internal Cloud Map DNS zone
 * `stack.environment`- The value of the `environment` variable
 * `stack.name` - The value of the `stack_name` variable
 * `stack.namespace` - The stack name and environment, joined by `-`
 * `stack.tags` - The map of tags supplied in the `tags` variable
-* `vpc_id`
+* `vpc_id` - The ID of the VPC
 
 ## Remote State
 
