@@ -4,11 +4,11 @@ resource "aws_efs_file_system" "solr_backup_volume" {
 }
 
 resource "aws_efs_mount_target" "solr_backup_mount_target" {
-  for_each          = toset(local.vpc.private_subnet_ids)
+  for_each          = toset(local.core.vpc.private_subnets.ids)
   file_system_id    = aws_efs_file_system.solr_backup_volume.id
   security_groups   = [
     aws_security_group.solr_backup_access.id,
-    local.vpc.bastion.security_group
+    local.core.bastion.security_group
   ]
   subnet_id         = each.key
 }
@@ -16,7 +16,7 @@ resource "aws_efs_mount_target" "solr_backup_mount_target" {
 resource "aws_security_group" "solr_backup_access" {
   name        = "${local.namespace}-solr-backup"
   description = "Solr Backup Volume Security Group"
-  vpc_id      = local.vpc.vpc_id
+  vpc_id      = local.core.vpc.id
 
   tags = local.tags
 }
@@ -42,7 +42,7 @@ resource "aws_security_group_rule" "solr_backup_ingress" {
 resource "aws_security_group" "solr_service" {
   name        = "${local.namespace}-solr-service"
   description = "Solr Service Security Group"
-  vpc_id      = local.vpc.vpc_id
+  vpc_id      = local.core.vpc.id
 
   tags = local.tags
 }
@@ -68,19 +68,19 @@ resource "aws_security_group_rule" "solr_service_ingress" {
 resource "aws_security_group" "solr_client" {
   name        = "${local.namespace}-solr-client"
   description = "Solr Client Security Group"
-  vpc_id      = local.vpc.vpc_id
+  vpc_id      = local.core.vpc.id
   tags        = local.tags
 }
 
 resource "aws_iam_role" "solr_task_role" {
   name               = "solr"
-  assume_role_policy = data.aws_iam_policy_document.ecs_assume_role.json
+  assume_role_policy = local.core.ecs.assume_role_policy
   tags               = local.tags
 }
 
 resource "aws_iam_role_policy_attachment" "solr_exec_command" {
   role       = aws_iam_role.solr_task_role.id
-  policy_arn = data.aws_iam_policy.ecs_exec_command.arn
+  policy_arn = local.core.ecs.allow_exec_command_policy_arn
 }
 
 resource "aws_ecs_task_definition" "solr" {
@@ -88,7 +88,7 @@ resource "aws_ecs_task_definition" "solr" {
   container_definitions = jsonencode([
     {
       name                = "solr"
-      image               = "${local.ecr.registry_url}/solr:7.5"
+      image               = "${local.core.ecs.registry_url}/solr:7.5"
       essential           = true
       cpu                 = 1000
       memoryReservation   = 2000
@@ -134,7 +134,7 @@ resource "aws_service_discovery_service" "solr" {
   name = "solr"
 
   dns_config {
-    namespace_id = local.vpc.service_discovery_dns_zone.id
+    namespace_id = local.core.vpc.service_discovery_dns_zone.id
     dns_records {
       ttl  = 10
       type = "A"
@@ -158,7 +158,7 @@ resource "aws_ecs_service" "solr" {
   }
 
   network_configuration {
-    subnets          = local.vpc.private_subnet_ids
+    subnets          = local.core.vpc.private_subnets.ids
     security_groups  = [
       aws_security_group.solr_service.id,
       aws_security_group.zookeeper_client.id

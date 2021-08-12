@@ -20,7 +20,7 @@ data "terraform_remote_state" "staging_waf" {
   backend = "s3"
 
   config {
-    bucket = "nulterra-state-sandbox"
+    bucket = var.state_bucket
     key    = "env:/${terraform.workspace}/staging-waf.tfstate"
     region = var.aws_region
   }

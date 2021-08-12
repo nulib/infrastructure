@@ -8,52 +8,24 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Set up `local.vpc` as an alias for the VPC remote state
+# Set up `local.core` as an alias for the VPC remote state
 # Create convenience accessors for `environment` and `namespace`
 # Merge `Component: solrcloud` into the stack tags
 locals {
-  environment   = local.vpc.stack.environment
-  namespace     = local.vpc.stack.namespace
-  tags          = merge(local.vpc.stack.tags, {Component = "solrcloud"})
-  vpc           = data.terraform_remote_state.vpc.outputs
-  ecr           = data.terraform_remote_state.ecr.outputs
+  environment   = local.core.stack.environment
+  namespace     = local.core.stack.namespace
+  tags          = merge(local.core.stack.tags, {Component = "solrcloud"})
+  core          = data.terraform_remote_state.core.outputs
 }
 
-data "terraform_remote_state" "vpc" {
+data "terraform_remote_state" "core" {
   backend = "s3"
 
   config = {
-    bucket = "nulterra-state-sandbox"
-    key    = "env:/${terraform.workspace}/vpc.tfstate"
+    bucket = var.state_bucket
+    key    = "env:/${terraform.workspace}/core.tfstate"
     region = var.aws_region
   }
-}
-
-data "terraform_remote_state" "ecr" {
-  backend = "s3"
-
-  config = {
-    bucket = "nulterra-state-sandbox"
-    key    = "env:/${terraform.workspace}/containers.tfstate"
-    region = var.aws_region
-  }
-}
-
-data "aws_iam_policy_document" "ecs_assume_role" {
-  statement {
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["ecs-tasks.amazonaws.com"]
-    }
-
-    actions = ["sts:AssumeRole"]
-  }
-}
-
-data "aws_iam_role" "task_execution_role" {
-  name = "ecsTaskExecutionRole"
 }
 
 resource "aws_ecs_cluster" "solrcloud" {
@@ -64,8 +36,4 @@ resource "aws_ecs_cluster" "solrcloud" {
 resource "aws_cloudwatch_log_group" "solrcloud_logs" {
   name = "/ecs/solrcloud"
   tags = local.tags
-}
-
-data "aws_iam_policy" "ecs_exec_command" {
-  name = "allow-ecs-exec"
 }
