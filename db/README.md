@@ -1,0 +1,37 @@
+## Description
+
+This terraform project includes the resources required for the Postgres database instance.
+
+## Prerequisites
+
+* [core](../core/README.md)
+
+## Variables
+
+* `aws_region` - The region to create resources in (default: `us-east-1`)
+* `state_bucket` - The bucket containing remote state files (default: `nulterra-state-sandbox`)
+* `postgres_version` - The version of postgres to provision (default: `13.1`)
+* `allocated_storage` - The size (in GB) of the allocated DB storage (default: `100`)
+* `instance_class` - The DB instance class to create (default: `db.t3.medium`)
+
+## Outputs
+
+* `address` - The database server address
+* `port` - The database server port
+* `client_security_group` - The ID of the security group for database clients
+* `admin_user` - The database superuser name
+* `admin_password` - The database superuser password
+
+## Remote State
+
+```
+data "terraform_remote_state" "db" {
+  backend = "s3"
+
+  config {
+    bucket = var.state_bucket
+    key    = "env:/${terraform.workspace}/db.tfstate"
+    region = var.aws_region
+  }
+}
+```
