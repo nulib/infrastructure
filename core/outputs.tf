@@ -27,28 +27,34 @@ output "stack" {
 
 output "vpc" {
   value = {
-    id = module.vpc.vpc_id
-    cidr_block = var.cidr_block
-    http_security_group_id = aws_security_group.internal_http.id
+    id                        = module.vpc.vpc_id
+    cidr_block                = var.cidr_block
+    http_security_group_id    = aws_security_group.internal_http.id
+
     private_dns_zone = {
       id   = aws_route53_zone.private_zone.id
       name = aws_route53_zone.private_zone.name 
     }
+
     private_subnets = {
-      cidr_blocks = var.private_subnets
-      ids = module.vpc.private_subnets
+      cidr_blocks   = var.private_subnets
+      ids           = module.vpc.private_subnets
     }
+
     public_dns_zone = {
       id   = aws_route53_zone.public_zone.id
       name = aws_route53_zone.public_zone.name 
     }
+
     public_subnets = {
-      cidr_blocks = var.public_subnets
-      ids = module.vpc.public_subnets
+      cidr_blocks   = var.public_subnets
+      ids           = module.vpc.public_subnets
     }
+
     service_discovery_dns_zone = {
-      id   = aws_service_discovery_private_dns_namespace.private_service_discovery.id
-      name = aws_service_discovery_private_dns_namespace.private_service_discovery.name
+      hosted_zone_id    = aws_service_discovery_private_dns_namespace.private_service_discovery.hosted_zone
+      id                = aws_service_discovery_private_dns_namespace.private_service_discovery.id
+      name              = aws_service_discovery_private_dns_namespace.private_service_discovery.name
     }
   }
 }

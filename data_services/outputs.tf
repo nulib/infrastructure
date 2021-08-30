@@ -7,3 +7,11 @@ output "postgres" {
     admin_password          = random_string.db_master_password.result
   }
 }
+
+output "redis" {
+  value = {
+    address                 = aws_route53_record.redis.name
+    port                    = 6379
+    client_security_group   = aws_security_group.redis_client.id
+  }
+}
