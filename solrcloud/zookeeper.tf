@@ -106,6 +106,12 @@ resource "aws_ecs_task_definition" "zookeeper" {
         awslogs-stream-prefix = "zk"
       }
     }
+    healthCheck = {
+      command  = ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/commands/stat"]
+      interval = 30
+      retries  = 3
+      timeout  = 5
+    }
   }])
   task_role_arn            = aws_iam_role.zookeeper_task_role.arn
   execution_role_arn       = local.core.ecs.task_execution_role_arn
@@ -141,9 +147,9 @@ resource "aws_ecs_service" "zookeeper" {
   launch_type            = "FARGATE"
   platform_version       = "1.4.0"
 
-  
   lifecycle {
-    ignore_changes = [desired_count]
+    create_before_destroy   = true
+    ignore_changes          = [desired_count]
   }
 
   network_configuration {

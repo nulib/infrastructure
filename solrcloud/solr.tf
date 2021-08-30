@@ -119,6 +119,12 @@ resource "aws_ecs_task_definition" "solr" {
           awslogs-stream-prefix = "solr"
         }
       }
+      healthCheck = {
+        command  = ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8983/solr/"]
+        interval = 30
+        retries  = 3
+        timeout  = 5
+      }
     }
   ])
 
@@ -162,7 +168,8 @@ resource "aws_ecs_service" "solr" {
   platform_version       = "1.4.0"
   
   lifecycle {
-    ignore_changes = [desired_count]
+    create_before_destroy   = true
+    ignore_changes          = [desired_count]
   }
 
   network_configuration {
