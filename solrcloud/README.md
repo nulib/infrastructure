@@ -5,7 +5,6 @@ This terraform project includes the resources required to get the Solrcloud (Sol
 ## Prerequisites
 
 * [core](../core/README.md)
-* [containers](../containers/README.md)
 
 ## Variables
 
@@ -16,8 +15,11 @@ This terraform project includes the resources required to get the Solrcloud (Sol
 
 ## Outputs
 
-* `solr_endpoint` - The service discovery URL of the solr cluster
-* `zookeeper_servers` - A list of zookeeper servers in `host:port` format
+* `solr.endpoint` - The service discovery URL of the solr cluster
+* `solr.client_security_group` - The security group for solr client access
+* `solr.cluster_size` - The size (number of nodes) of the solr cluster
+* `zookeeper.servers` - A list of zookeeper servers in `host:port` format
+* `zookeeper.client_security_group` - The security group for zookeeper client access
 
 ## Remote State
 
