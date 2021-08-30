@@ -1,3 +1,10 @@
+output "elasticsearch" {
+  value = {
+    arn      = aws_elasticsearch_domain.elasticsearch.arn
+    endpoint = "https://${aws_elasticsearch_domain.elasticsearch.endpoint}/"
+  }
+}
+
 output "postgres" {
   value = {
     address                 = aws_db_instance.db.address
