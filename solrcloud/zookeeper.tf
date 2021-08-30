@@ -108,7 +108,7 @@ resource "aws_ecs_task_definition" "zookeeper" {
     }
   }])
   task_role_arn            = aws_iam_role.zookeeper_task_role.arn
-  execution_role_arn       = data.aws_iam_role.task_execution_role.arn
+  execution_role_arn       = local.core.ecs.task_execution_role_arn
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256

@@ -7,8 +7,7 @@ resource "aws_efs_mount_target" "solr_backup_mount_target" {
   for_each          = toset(local.core.vpc.private_subnets.ids)
   file_system_id    = aws_efs_file_system.solr_backup_volume.id
   security_groups   = [
-    aws_security_group.solr_backup_access.id,
-    local.core.bastion.security_group
+    aws_security_group.solr_backup_access.id
   ]
   subnet_id         = each.key
 }
@@ -37,6 +36,15 @@ resource "aws_security_group_rule" "solr_backup_ingress" {
   to_port                     = 2049
   protocol                    = "tcp"
   source_security_group_id    = aws_security_group.solr_service.id
+}
+
+resource "aws_security_group_rule" "solr_backup_ingress_bastion" {
+  security_group_id           = aws_security_group.solr_backup_access.id
+  type                        = "ingress"
+  from_port                   = 2049
+  to_port                     = 2049
+  protocol                    = "tcp"
+  source_security_group_id    = local.core.bastion.security_group
 }
 
 resource "aws_security_group" "solr_service" {
@@ -122,7 +130,7 @@ resource "aws_ecs_task_definition" "solr" {
   }
 
   task_role_arn            = aws_iam_role.solr_task_role.arn
-  execution_role_arn       = data.aws_iam_role.task_execution_role.arn
+  execution_role_arn       = local.core.ecs.task_execution_role_arn
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 1024
