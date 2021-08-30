@@ -1,34 +1,4 @@
-terraform {
-  backend "s3" {
-    key    = "db.tfstate"
-  }
-}
-
-provider "aws" {
-  region = var.aws_region
-}
-
-# Set up `local.core` as an alias for the VPC remote state
-# Create convenience accessors for `environment` and `namespace`
-# Merge `Component: db` into the stack tags
-locals {
-  environment   = local.core.stack.environment
-  namespace     = local.core.stack.namespace
-  tags          = merge(local.core.stack.tags, {Component = "db"})
-  core          = data.terraform_remote_state.core.outputs
-}
-
-data "terraform_remote_state" "core" {
-  backend = "s3"
-
-  config = {
-    bucket = var.state_bucket
-    key    = "env:/${terraform.workspace}/core.tfstate"
-    region = var.aws_region
-  }
-}
-
-resource "random_string" "master_password" {
+resource "random_string" "db_master_password" {
   length  = 16
   upper   = true
   lower   = true
@@ -98,7 +68,7 @@ resource "aws_db_instance" "db" {
   name                      = "${local.core.stack.name}db"
   username                  = "dbadmin"
   parameter_group_name      = aws_db_parameter_group.db_parameter_group.name
-  password                  = random_string.master_password.result
+  password                  = random_string.db_master_password.result
   maintenance_window        = "Mon:00:00-Mon:03:00"
   backup_window             = "03:00-06:00"
   backup_retention_period   = 35

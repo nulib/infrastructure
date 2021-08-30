@@ -1,6 +1,6 @@
 ## Description
 
-This terraform project includes the resources required for the Postgres database instance.
+This terraform project includes the resources required for the main datastore services (PostgreSQL, Redis, and Elasticsearch).
 
 ## Prerequisites
 
@@ -16,21 +16,21 @@ This terraform project includes the resources required for the Postgres database
 
 ## Outputs
 
-* `address` - The database server address
-* `port` - The database server port
-* `client_security_group` - The ID of the security group for database clients
-* `admin_user` - The database superuser name
-* `admin_password` - The database superuser password
+* `postgres.address` - The database server address
+* `postgres.port` - The database server port
+* `postgres.client_security_group` - The ID of the security group for database clients
+* `postgres.admin_user` - The database superuser name
+* `postgres.admin_password` - The database superuser password
 
 ## Remote State
 
 ```
-data "terraform_remote_state" "db" {
+data "terraform_remote_state" "data_services" {
   backend = "s3"
 
   config {
     bucket = var.state_bucket
-    key    = "env:/${terraform.workspace}/db.tfstate"
+    key    = "env:/${terraform.workspace}/data_services.tfstate"
     region = var.aws_region
   }
 }
