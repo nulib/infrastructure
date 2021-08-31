@@ -24,6 +24,9 @@ resource "aws_elasticsearch_domain" "elasticsearch" {
   domain_name           = "${local.namespace}-common-index"
   elasticsearch_version = "6.8"
   tags                  = local.tags
+  advanced_options      = {
+    "rest.action.multi.allow_explicit_index" = "true"
+  }  
   cluster_config {
     instance_type  = "t2.medium.elasticsearch"
     instance_count = 2

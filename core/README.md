@@ -43,6 +43,8 @@ This terraform project includes the core resources that form the base of NUL's s
 
 ## Remote State
 
+### Direct Access
+
 ```
 data "terraform_remote_state" "core" {
   backend = "s3"
@@ -54,3 +56,16 @@ data "terraform_remote_state" "core" {
   }
 }
 ```
+
+Outputs are available on `data.remote_state.core.outputs.*`
+
+### Module Access
+
+```
+module "core" {
+  source = "git::https://github.com/nulib/infrastructure.git//modules/remote_state"
+  component = "core"
+}
+```
+
+Outputs are available on `module.core.outputs.*`

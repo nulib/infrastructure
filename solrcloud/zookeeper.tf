@@ -1,18 +1,18 @@
 resource "aws_iam_role" "zookeeper_task_role" {
   name               = "zookeeper"
-  assume_role_policy = local.core.ecs.assume_role_policy
+  assume_role_policy = module.core.outputs.ecs.assume_role_policy
   tags               = local.tags
 }
 
 resource "aws_iam_role_policy_attachment" "zookeeper_exec_command" {
   role       = aws_iam_role.zookeeper_task_role.id
-  policy_arn = local.core.ecs.allow_exec_command_policy_arn
+  policy_arn = module.core.outputs.ecs.allow_exec_command_policy_arn
 }
 
 resource "aws_security_group" "zookeeper_service" {
   name        = "${local.namespace}-zookeeper-service"
   description = "Zookeeper Service Security Group"
-  vpc_id      = local.core.vpc.id
+  vpc_id      = module.core.outputs.vpc.id
 
   tags = local.tags
 }
@@ -47,18 +47,18 @@ resource "aws_security_group_rule" "zookeeper_service_admin_ingress" {
   from_port          = 8080
   to_port            = 8080
   protocol           = "tcp"
-  cidr_blocks        = [local.core.vpc.cidr_block]
+  cidr_blocks        = [module.core.outputs.vpc.cidr_block]
 }
 
 resource "aws_security_group" "zookeeper_client" {
   name        = "${local.namespace}-zookeeper-client"
   description = "Zookeeper Client Security Group"
-  vpc_id      = local.core.vpc.id
+  vpc_id      = module.core.outputs.vpc.id
   tags        = local.tags
 }
 
 locals {
-  zookeeper_hosts = formatlist("zookeeper-%s.${local.core.vpc.service_discovery_dns_zone.name}", range(1, var.zookeeper_ensemble_size+1))
+  zookeeper_hosts = formatlist("zookeeper-%s.${module.core.outputs.vpc.service_discovery_dns_zone.name}", range(1, var.zookeeper_ensemble_size+1))
   zookeeper_ensemble = [for index, server in local.zookeeper_hosts : "server.${index+1}=${server}:2888:3888;2181"]
   zookeeper_servers  = [for server in local.zookeeper_hosts : "${server}:2181"]
 }
@@ -68,7 +68,7 @@ resource "aws_ecs_task_definition" "zookeeper" {
   family = "zookeeper-${count.index+1}"
   container_definitions = jsonencode([{
     name                = "zookeeper"
-    image               = "${local.core.ecs.registry_url}/zookeeper:latest"
+    image               = "${module.core.outputs.ecs.registry_url}/zookeeper:latest"
     essential           = true
     cpu                 = 256
     memoryReservation   = 512
@@ -114,7 +114,7 @@ resource "aws_ecs_task_definition" "zookeeper" {
     }
   }])
   task_role_arn            = aws_iam_role.zookeeper_task_role.arn
-  execution_role_arn       = local.core.ecs.task_execution_role_arn
+  execution_role_arn       = module.core.outputs.ecs.task_execution_role_arn
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
@@ -127,7 +127,7 @@ resource "aws_service_discovery_service" "zookeeper" {
   name     = "zookeeper-${count.index+1}"
 
   dns_config {
-    namespace_id = local.core.vpc.service_discovery_dns_zone.id
+    namespace_id = module.core.outputs.vpc.service_discovery_dns_zone.id
     dns_records {
       ttl  = 10
       type = "A"
@@ -153,7 +153,7 @@ resource "aws_ecs_service" "zookeeper" {
   }
 
   network_configuration {
-    subnets          = local.core.vpc.private_subnets.ids
+    subnets          = module.core.outputs.vpc.private_subnets.ids
     security_groups  = [aws_security_group.zookeeper_service.id]
     assign_public_ip = false
   }

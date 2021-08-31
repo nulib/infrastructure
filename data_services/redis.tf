@@ -1,12 +1,12 @@
 resource "aws_security_group" "redis_service" {
   name   = "${local.namespace}-redis-service"
-  vpc_id = local.core.vpc.id
+  vpc_id = module.core.outputs.vpc.id
   tags   = local.tags
 }
 
 resource "aws_security_group" "redis_client" {
   name   = "${local.namespace}-redis-client"
-  vpc_id = local.core.vpc.id
+  vpc_id = module.core.outputs.vpc.id
   tags   = local.tags
 }
 
@@ -30,7 +30,7 @@ resource "aws_security_group_rule" "redis_ingress" {
 
 resource "aws_elasticache_subnet_group" "redis" {
   name       = "${local.namespace}-redis"
-  subnet_ids = local.core.vpc.private_subnets.ids
+  subnet_ids = module.core.outputs.vpc.private_subnets.ids
   tags       = local.tags
 }
 
@@ -47,8 +47,8 @@ resource "aws_elasticache_cluster" "redis" {
 }
 
 resource "aws_route53_record" "redis" {
-  zone_id = local.core.vpc.private_dns_zone.id
-  name    = "redis.${local.core.vpc.private_dns_zone.name}"
+  zone_id = module.core.outputs.vpc.private_dns_zone.id
+  name    = "redis.${module.core.outputs.vpc.private_dns_zone.name}"
   type    = "CNAME"
   ttl     = 900
   records = aws_elasticache_cluster.redis.cache_nodes.*.address

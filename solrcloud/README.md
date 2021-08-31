@@ -23,6 +23,8 @@ This terraform project includes the resources required to get the Solrcloud (Sol
 
 ## Remote State
 
+### Direct Access
+
 ```
 data "terraform_remote_state" "solrcloud" {
   backend = "s3"
@@ -34,3 +36,16 @@ data "terraform_remote_state" "solrcloud" {
   }
 }
 ```
+
+Outputs are available on `data.remote_state.solrcloud.outputs.*`
+
+### Module Access
+
+```
+module "solrcloud" {
+  source = "git::https://github.com/nulib/infrastructure.git//modules/remote_state"
+  component = "solrcloud"
+}
+```
+
+Outputs are available on `module.solrcloud.outputs.*`

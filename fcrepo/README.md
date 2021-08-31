@@ -18,6 +18,8 @@ This terraform project includes the resources required to get Fedora 4.7.5 (with
 
 ## Remote State
 
+### Direct Access
+
 ```
 data "terraform_remote_state" "fcrepo" {
   backend = "s3"
@@ -29,3 +31,16 @@ data "terraform_remote_state" "fcrepo" {
   }
 }
 ```
+
+Outputs are available on `data.remote_state.fcrepo.outputs.*`
+
+### Module Access
+
+```
+module "fcrepo" {
+  source = "git::https://github.com/nulib/infrastructure.git//modules/remote_state"
+  component = "fcrepo"
+}
+```
+
+Outputs are available on `module.fcrepo.outputs.*`

@@ -1,6 +1,6 @@
 output "solr" {
   value = {
-    endpoint                = "http://${aws_service_discovery_service.solr.name}.${local.core.vpc.service_discovery_dns_zone.name}:8983/solr"
+    endpoint                = "http://${aws_service_discovery_service.solr.name}.${module.core.outputs.vpc.service_discovery_dns_zone.name}:8983/solr"
     client_security_group   = aws_security_group.solr_client.id
     cluster_size            = var.solr_cluster_size
   }

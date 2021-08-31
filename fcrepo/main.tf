@@ -8,19 +8,17 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Set up `local.core` as an alias for the VPC remote state
+# Set up `module.core.outputs. as an alias for the VPC remote state
 # Create convenience accessors for `environment` and `namespace`
 # Merge `Component: fcrepo` into the stack tags
 locals {
-  environment   = local.core.stack.environment
-  namespace     = local.core.stack.namespace
-  tags          = merge(local.core.stack.tags, {Component = "fcrepo"})
-  core          = data.terraform_remote_state.core.outputs
-  data_services = data.terraform_remote_state.data_services.outputs
+  environment   = module.core.outputs.stack.environment
+  namespace     = module.core.outputs.stack.namespace
+  tags          = merge(module.core.outputs.stack.tags, {Component = "fcrepo"})
 
   java_opts = {
-    "fcrepo.postgresql.host" = local.data_services.postgres.address
-    "fcrepo.postgresql.port" = local.data_services.postgres.port
+    "fcrepo.postgresql.host" = module.data_services.outputs.postgres.address
+    "fcrepo.postgresql.port" = module.data_services.outputs.postgres.port
     "fcrepo.postgresql.username" = "fcrepo"
     "fcrepo.postgresql.password" = module.fcrepo_schema.password
     "aws.accessKeyId" = aws_iam_access_key.fedora_binary_bucket_access_key.id
@@ -29,24 +27,14 @@ locals {
   }
 }
 
-data "terraform_remote_state" "core" {
-  backend = "s3"
-
-  config = {
-    bucket = var.state_bucket
-    key    = "env:/${terraform.workspace}/core.tfstate"
-    region = var.aws_region
-  }
+module "core" {
+  source    = "../modules/remote_state"
+  component = "core"
 }
 
-data "terraform_remote_state" "data_services" {
-  backend = "s3"
-
-  config = {
-    bucket = var.state_bucket
-    key    = "env:/${terraform.workspace}/data_services.tfstate"
-    region = var.aws_region
-  }
+module "data_services" {
+  source    = "../modules/remote_state"
+  component = "data_services"
 }
 
 resource "aws_ecs_cluster" "fcrepo" {
@@ -140,7 +128,7 @@ module "fcrepo_schema" {
 resource "aws_security_group" "fcrepo_service" {
   name        = "${local.namespace}-fcrepo-service"
   description = "Fedora Repository Service Security Group"
-  vpc_id      = local.core.vpc.id
+  vpc_id      = module.core.outputs.vpc.id
 
   tags = local.tags
 }
@@ -166,13 +154,13 @@ resource "aws_security_group_rule" "fcrepo_service_ingress" {
 resource "aws_security_group" "fcrepo_client" {
   name        = "${local.namespace}-fcrepo-client"
   description = "Fedora Repository Client Security Group"
-  vpc_id      = local.core.vpc.id
+  vpc_id      = module.core.outputs.vpc.id
   tags        = local.tags
 }
 
 resource "aws_iam_role" "fcrepo_task_role" {
   name               = "fcrepo"
-  assume_role_policy = local.core.ecs.assume_role_policy
+  assume_role_policy = module.core.outputs.ecs.assume_role_policy
   tags               = local.tags
 }
 
@@ -183,7 +171,7 @@ resource "aws_iam_role_policy_attachment" "fcrepo_binary_bucket_access" {
 
 resource "aws_iam_role_policy_attachment" "fcrepo_exec_command" {
   role       = aws_iam_role.fcrepo_task_role.id
-  policy_arn = local.core.ecs.allow_exec_command_policy_arn
+  policy_arn = module.core.outputs.ecs.allow_exec_command_policy_arn
 }
 
 resource "aws_ecs_task_definition" "fcrepo" {
@@ -191,7 +179,7 @@ resource "aws_ecs_task_definition" "fcrepo" {
   container_definitions = jsonencode([
     {
       name                = "fcrepo"
-      image               = "${local.core.ecs.registry_url}/fcrepo4:4.7.5-s3multipart"
+      image               = "${module.core.outputs.ecs.registry_url}/fcrepo4:4.7.5-s3multipart"
       essential           = true
       cpu                 = 1000
       memoryReservation   = 3000
@@ -234,7 +222,7 @@ resource "aws_ecs_task_definition" "fcrepo" {
   }
 
   task_role_arn            = aws_iam_role.fcrepo_task_role.arn
-  execution_role_arn       = local.core.ecs.task_execution_role_arn
+  execution_role_arn       = module.core.outputs.ecs.task_execution_role_arn
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 1024
@@ -246,7 +234,7 @@ resource "aws_service_discovery_service" "fcrepo" {
   name = "fcrepo"
 
   dns_config {
-    namespace_id = local.core.vpc.service_discovery_dns_zone.id
+    namespace_id = module.core.outputs.vpc.service_discovery_dns_zone.id
     dns_records {
       ttl  = 10
       type = "A"
@@ -271,10 +259,10 @@ resource "aws_ecs_service" "fcrepo" {
   }
 
   network_configuration {
-    subnets          = local.core.vpc.private_subnets.ids
+    subnets          = module.core.outputs.vpc.private_subnets.ids
     security_groups  = [ 
       aws_security_group.fcrepo_service.id,
-      local.data_services.postgres.client_security_group
+      module.data_services.outputs.postgres.client_security_group
     ]
     assign_public_ip = false
   }

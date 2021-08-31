@@ -9,7 +9,7 @@ resource "random_string" "db_master_password" {
 resource "aws_security_group" "db" {
   name          = "${local.namespace}-db"
   description   = "RDS Security Group"
-  vpc_id        = local.core.vpc.id
+  vpc_id        = module.core.outputs.vpc.id
 }
 
 resource "aws_security_group_rule" "db_egress" {
@@ -33,12 +33,12 @@ resource "aws_security_group_rule" "db_ingress" {
 resource "aws_security_group" "db_client" {
   name          = "${local.namespace}-db-client"
   description   = "RDS Client Security Group"
-  vpc_id        = local.core.vpc.id
+  vpc_id        = module.core.outputs.vpc.id
 }
 
 resource "aws_db_subnet_group" "db_subnet_group" {
   name_prefix   = "${local.namespace}-db-"
-  subnet_ids    = local.core.vpc.private_subnets.ids
+  subnet_ids    = module.core.outputs.vpc.private_subnets.ids
   tags          = local.tags
 }
 
@@ -65,7 +65,7 @@ resource "aws_db_instance" "db" {
   engine                    = "postgres"
   engine_version            = var.postgres_version
   instance_class            = "db.t3.medium"
-  name                      = "${local.core.stack.name}db"
+  name                      = "${module.core.outputs.stack.name}db"
   username                  = "dbadmin"
   parameter_group_name      = aws_db_parameter_group.db_parameter_group.name
   password                  = random_string.db_master_password.result
@@ -76,4 +76,8 @@ resource "aws_db_instance" "db" {
   db_subnet_group_name      = aws_db_subnet_group.db_subnet_group.name
   vpc_security_group_ids    = [aws_security_group.db.id]
   tags                      = local.tags
+
+  lifecycle {
+    ignore_changes = [latest_restorable_time]
+  }
 }

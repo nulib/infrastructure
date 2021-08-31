@@ -24,6 +24,8 @@ This terraform project includes the resources required for the main datastore se
 
 ## Remote State
 
+### Direct Access
+
 ```
 data "terraform_remote_state" "data_services" {
   backend = "s3"
@@ -35,3 +37,16 @@ data "terraform_remote_state" "data_services" {
   }
 }
 ```
+
+Outputs are available on `data.remote_state.data_services.outputs.*`
+
+### Module Access
+
+```
+module "data_services" {
+  source = "git::https://github.com/nulib/infrastructure.git//modules/remote_state"
+  component = "data_services"
+}
+```
+
+Outputs are available on `module.data_services.outputs.*`
