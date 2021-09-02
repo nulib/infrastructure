@@ -16,11 +16,16 @@ This terraform project includes the resources required for the main datastore se
 
 ## Outputs
 
+* `elasticsearch.arn` - The ARN of the Elasticsearch domain
+* `elasticsearch.endpoint` - The URL of the Elasticsearch service
 * `postgres.address` - The database server address
 * `postgres.port` - The database server port
 * `postgres.client_security_group` - The ID of the security group for database clients
 * `postgres.admin_user` - The database superuser name
 * `postgres.admin_password` - The database superuser password
+* `redis.address` - The address of the Redis cluster
+* `redis.port` - The port of the Redis cluster
+* `redis.client_security_group` - The ID of the security group for Redis clients
 
 ## Remote State
 
