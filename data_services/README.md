@@ -16,6 +16,8 @@ This terraform project includes the resources required for the main datastore se
 
 ## Outputs
 
+* `elasticsearch.full_policy_arn` - The ARN of the policy granting read/write access to Elasticsearch
+* `elasticsearch.read_policy_arn` - The ARN of the policy granting read access to Elasticsearch
 * `elasticsearch.arn` - The ARN of the Elasticsearch domain
 * `elasticsearch.endpoint` - The URL of the Elasticsearch service
 * `postgres.address` - The database server address

@@ -1,7 +1,9 @@
 output "elasticsearch" {
   value = {
-    arn      = aws_elasticsearch_domain.elasticsearch.arn
-    endpoint = "https://${aws_elasticsearch_domain.elasticsearch.endpoint}/"
+    arn             = aws_elasticsearch_domain.elasticsearch.arn
+    endpoint        = "https://${aws_elasticsearch_domain.elasticsearch.endpoint}/"
+    full_policy_arn = aws_iam_policy.elasticsearch_full_access.arn
+    read_policy_arn = aws_iam_policy.elasticsearch_read_access.arn
   }
 }
 

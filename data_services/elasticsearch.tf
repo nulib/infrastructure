@@ -112,3 +112,35 @@ data "aws_iam_policy_document" "elasticsearch_snapshot_bucket_access" {
     resources = ["${aws_s3_bucket.elasticsearch_snapshot_bucket.arn}/*"]
   }
 }
+
+data "aws_iam_policy_document" "elasticsearch_read_access" {
+  statement {
+    effect    = "Allow"
+    actions   = ["es:ESHttpGet"]
+    resources = [
+      aws_elasticsearch_domain.elasticsearch.arn,
+      "${aws_elasticsearch_domain.elasticsearch.arn}/*"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "elasticsearch_read_access" {
+  name   = "${local.namespace}-elasticsearch-read"
+  policy = data.aws_iam_policy_document.elasticsearch_read_access.json
+}
+
+data "aws_iam_policy_document" "elasticsearch_full_access" {
+  statement {
+    effect    = "Allow"
+    actions   = ["es:ESHttp*"]
+    resources = [
+      aws_elasticsearch_domain.elasticsearch.arn,
+      "${aws_elasticsearch_domain.elasticsearch.arn}/*"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "elasticsearch_full_access" {
+  name   = "${local.namespace}-elasticsearch-full"
+  policy = data.aws_iam_policy_document.elasticsearch_full_access.json
+}
