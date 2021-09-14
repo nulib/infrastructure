@@ -1,3 +1,5 @@
+![terraform style](https://github.com/nulib/infrastructure/actions/workflows/tflint.yml/badge.svg)
+
 ## Description
 
 NUL projects such as [Meadow](https://github.com/nulib/meadow) and [AVR](https://github.com/nulib/avalon) have their own `terraform` directories where their app-specific resources are managed. This repository is for resources (such as the VPC/Firewall, or third-party pieces like Fedora, Solr, etc.) that don't have another specific project managing them.

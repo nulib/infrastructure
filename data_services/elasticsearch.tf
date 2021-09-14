@@ -1,5 +1,6 @@
 resource "aws_security_group" "elasticsearch" {
   name   = "${local.namespace}-elasticsearch"
+  tags   = local.tags
 }
 
 resource "aws_security_group_rule" "elasticsearch_egress" {
@@ -127,6 +128,7 @@ data "aws_iam_policy_document" "elasticsearch_read_access" {
 resource "aws_iam_policy" "elasticsearch_read_access" {
   name   = "${local.namespace}-elasticsearch-read"
   policy = data.aws_iam_policy_document.elasticsearch_read_access.json
+  tags   = local.tags
 }
 
 data "aws_iam_policy_document" "elasticsearch_full_access" {
@@ -143,4 +145,5 @@ data "aws_iam_policy_document" "elasticsearch_full_access" {
 resource "aws_iam_policy" "elasticsearch_full_access" {
   name   = "${local.namespace}-elasticsearch-full"
   policy = data.aws_iam_policy_document.elasticsearch_full_access.json
+  tags   = local.tags
 }

@@ -135,6 +135,8 @@ resource "aws_service_discovery_service" "zookeeper" {
 
     routing_policy = "MULTIVALUE"
   }
+
+  tags = local.tags
 }
 
 resource "aws_ecs_service" "zookeeper" {

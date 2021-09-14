@@ -78,6 +78,7 @@ resource "aws_s3_bucket" "fedora_binary_bucket" {
 resource "aws_iam_user" "fedora_binary_bucket_user" {
   name = "${local.namespace}-fcrepo"
   path = "/system/"
+  tags = local.tags
 }
 
 resource "aws_iam_access_key" "fedora_binary_bucket_access_key" {
@@ -118,6 +119,7 @@ data "aws_iam_policy_document" "fedora_binary_bucket_access" {
 resource "aws_iam_policy" "fedora_binary_bucket_policy" {
   name   = "${local.namespace}-fcrepo-s3-bucket-access"
   policy = data.aws_iam_policy_document.fedora_binary_bucket_access.json
+  tags   = local.tags
 }
 
 resource "aws_iam_user_policy_attachment" "fedora_binary_bucket_user_access" {
@@ -249,6 +251,8 @@ resource "aws_service_discovery_service" "fcrepo" {
 
     routing_policy = "MULTIVALUE"
   }
+
+  tags = local.tags
 }
 
 resource "aws_ecs_service" "fcrepo" {

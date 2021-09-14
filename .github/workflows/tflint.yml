@@ -1,0 +1,37 @@
+name: Terraform Lint
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  tflint:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [core, data_services, fcrepo, solrcloud]
+
+    steps:
+    - uses: actions/checkout@v2
+      name: Checkout source code
+
+    - uses: actions/cache@v2
+      name: Cache plugin dir
+      with:
+        path: ~/.tflint.d/plugins
+        key: tflint-${{ hashFiles('.tflint.hcl') }}
+
+    - uses: terraform-linters/setup-tflint@v1
+      name: Setup tflint
+
+    - name: Show version
+      run: tflint --version
+
+    - name: Lint ${{ matrix.component }} component
+      run: |
+        terraform init -backend=false -input=false
+        tflint -c ../.tflint.hcl --init
+        tflint -c ../.tflint.hcl -f compact
+      working-directory: ./${{ matrix.component }}

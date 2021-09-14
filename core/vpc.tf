@@ -1,5 +1,6 @@
 module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
+  source    = "terraform-aws-modules/vpc/aws"
+  version   = "3.7.0"
 
   name = "${local.namespace}-vpc"
   cidr = var.cidr_block
@@ -65,7 +66,8 @@ resource "aws_security_group" "internal_http" {
 }
 
 module "endpoints" {
-  source = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
+  source    = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
+  version   = "3.7.0"
 
   vpc_id             = module.vpc.vpc_id
   security_group_ids = [module.vpc.default_security_group_id, aws_security_group.endpoint_access.id]

@@ -10,6 +10,7 @@ resource "aws_security_group" "db" {
   name          = "${local.namespace}-db"
   description   = "RDS Security Group"
   vpc_id        = module.core.outputs.vpc.id
+  tags          = local.tags
 }
 
 resource "aws_security_group_rule" "db_egress" {
@@ -34,6 +35,7 @@ resource "aws_security_group" "db_client" {
   name          = "${local.namespace}-db-client"
   description   = "RDS Client Security Group"
   vpc_id        = module.core.outputs.vpc.id
+  tags          = local.tags
 }
 
 resource "aws_db_subnet_group" "db_subnet_group" {
@@ -43,9 +45,10 @@ resource "aws_db_subnet_group" "db_subnet_group" {
 }
 
 resource "aws_db_parameter_group" "db_parameter_group" {
-  name_prefix = "${local.namespace}-db-"
-  family = "postgres${element(split(".", var.postgres_version), 0)}"
-
+  name_prefix   = "${local.namespace}-db-"
+  family        = "postgres${element(split(".", var.postgres_version), 0)}"
+  tags          = local.tags
+  
   parameter {
     name = "client_encoding"
     value = "UTF8"

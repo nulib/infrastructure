@@ -156,6 +156,8 @@ resource "aws_service_discovery_service" "solr" {
 
     routing_policy = "MULTIVALUE"
   }
+
+  tags = local.tags
 }
 
 resource "aws_ecs_service" "solr" {
