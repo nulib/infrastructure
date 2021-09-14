@@ -14,7 +14,14 @@ provider "aws" {
 locals {
   environment   = module.core.outputs.stack.environment
   namespace     = module.core.outputs.stack.namespace
-  tags          = merge(module.core.outputs.stack.tags, {Component = "fcrepo"})
+  tags          = merge(
+    module.core.outputs.stack.tags, 
+    {
+      Component   = "fcrepo",
+      Git         = "github.com/nulib/infrastructure"
+      Project     = "Infrastructure"
+    }
+  )
 
   java_opts = {
     "fcrepo.postgresql.host" = module.data_services.outputs.postgres.address

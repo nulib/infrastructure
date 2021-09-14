@@ -14,7 +14,14 @@ provider "aws" {
 locals {
   environment   = module.core.outputs.stack.environment
   namespace     = module.core.outputs.stack.namespace
-  tags          = merge(module.core.outputs.stack.tags, {Component = "solrcloud"})
+  tags          = merge(
+    module.core.outputs.stack.tags, 
+    {
+      Component   = "solrcloud",
+      Git         = "github.com/nulib/infrastructure"
+      Project     = "Infrastructure"
+    }
+  )
 }
 
 module "core" {
