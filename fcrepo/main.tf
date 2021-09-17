@@ -4,9 +4,7 @@ terraform {
   }
 }
 
-provider "aws" {
-  region = var.aws_region
-}
+provider "aws" { }
 
 # Set up `module.core.outputs. as an alias for the VPC remote state
 # Create convenience accessors for `environment` and `namespace`
@@ -43,6 +41,8 @@ module "data_services" {
   source    = "../modules/remote_state"
   component = "data_services"
 }
+
+data "aws_region" "current" {}
 
 resource "aws_ecs_cluster" "fcrepo" {
   name = "fcrepo"
@@ -130,8 +130,6 @@ resource "aws_iam_user_policy_attachment" "fedora_binary_bucket_user_access" {
 module "fcrepo_schema" {
   source        = "../modules/dbschema"
   schema        = "fcrepo"
-  aws_region    = var.aws_region
-  state_bucket  = var.state_bucket
 }
 
 resource "aws_security_group" "fcrepo_service" {
@@ -213,7 +211,7 @@ resource "aws_ecs_task_definition" "fcrepo" {
         logDriver = "awslogs"
         options   = {
           awslogs-group         = aws_cloudwatch_log_group.fcrepo_logs.name
-          awslogs-region        = var.aws_region
+          awslogs-region        = data.aws_region.current.name
           awslogs-stream-prefix = "fcrepo"
         }
       }

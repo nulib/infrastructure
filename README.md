@@ -15,13 +15,13 @@ Each top-level folder represents a discrete piece of infrastructure, and we shou
 Each folder should follow the same naming conventions:
 
 * `main.tf` – The main terraform manifest for the folder, where the provider, backend, and primary resources are specified
-* `variables.tf` – Contains variable declarations, and any locals derived *only* from variables
+* `secrets.tf` – Contains variables/secrets used elsewhere in the manifest, as well as any locals derived *only* from those values
 * `data.tf` – Contains terraform `data` sources, if there are enough of them to warrant splitting them out
 * `outputs.tf` – Contains only terraform outputs
 
-## Variables
+## Secrets
 
-Variables are stored in files following the naming convention `[environment].tfvars`. They should not be checked into github in this project. Instead, create them in a reasonably named subdirectory within the [tfvars](https://github.com/nulib/tfvars) project and symlink them to where you need them in this project.
+Instead of using Terraform variables (and `.tfvars` files), which come with a host of security/maintenance/synchronization issues, each component or project should store a JSON string of their secrets in [AWS Server Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) under the `/tfvars/` namespace. These secrets can be referenced using the [`secrets` module](modules/secrets/README.md) in this repository. Please see that module's README file and other components within this repository for examples.
 
 ## Common Configuration
 
@@ -36,9 +36,7 @@ Each folder should be initialized the same way:
       }
     }
 
-    provider "aws" {
-      region = var.aws_region
-    }
+    provider "aws" { }
     ```
 
 When running `terraform init`:
