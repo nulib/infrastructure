@@ -6,9 +6,8 @@ This terraform project includes the resources required for the main datastore se
 
 * [core](../core/README.md)
 
-## Variables
+## Secrets
 
-* `aws_region` - The region to create resources in (default: `us-east-1`)
 * `state_bucket` - The bucket containing remote state files (default: `nulterra-state-sandbox`)
 * `postgres_version` - The version of postgres to provision (default: `13.1`)
 * `allocated_storage` - The size (in GB) of the allocated DB storage (default: `100`)
@@ -40,7 +39,6 @@ data "terraform_remote_state" "data_services" {
   config {
     bucket = var.state_bucket
     key    = "env:/${terraform.workspace}/data_services.tfstate"
-    region = var.aws_region
   }
 }
 ```

@@ -7,9 +7,8 @@ This terraform project includes the resources required to get Fedora 4.7.5 (with
 * [core](../core/README.md)
 * [data_services](../data_services/README.md)
 
-## Variables
+## Secrets
 
-* `aws_region` - The region to create resources in (default: `us-east-1`)
 * `state_bucket` - The bucket containing remote state files (default: `nulterra-state-sandbox`)
 
 ## Outputs
@@ -27,7 +26,6 @@ data "terraform_remote_state" "fcrepo" {
   config {
     bucket = var.state_bucket
     key    = "env:/${terraform.workspace}/fcrepo.tfstate"
-    region = var.aws_region
   }
 }
 ```

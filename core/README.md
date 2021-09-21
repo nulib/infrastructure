@@ -7,9 +7,8 @@ This terraform project includes the core resources that form the base of NUL's s
 * Redis Instance
 * Elasticsearch
 
-## Variables
+## Secrets
 
-* `aws_region` - The region to create resources in (default: `us-east-1`) 
 * `availability_zones` - A list of availability zones to assign to the VPC (default: `[us-east-1a, us-east-1b, us-east-1c]`)
 * `cidr_block` - The CIDR block to use for the VPC (default: `10.1.0.0/16`)
 * `environment` - The environment name or code (default: the first letter of the terraform workspace name, e.g. `s` or `p`)
@@ -52,7 +51,6 @@ data "terraform_remote_state" "core" {
   config {
     bucket = var.state_bucket
     key    = "env:/${terraform.workspace}/core.tfstate"
-    region = var.aws_region
   }
 }
 ```

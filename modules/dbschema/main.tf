@@ -4,7 +4,6 @@ data "terraform_remote_state" "core" {
   config = {
     bucket = var.state_bucket
     key    = "env:/${terraform.workspace}/core.tfstate"
-    region = var.aws_region
   }
 }
 
@@ -14,7 +13,6 @@ data "terraform_remote_state" "data_services" {
   config = {
     bucket = var.state_bucket
     key    = "env:/${terraform.workspace}/data_services.tfstate"
-    region = var.aws_region
   }
 }
 

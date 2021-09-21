@@ -4,8 +4,15 @@ terraform {
   }
 }
 
-provider "aws" {
-  region = var.aws_region
+provider "aws" { }
+
+module "core" {
+  source    = "../modules/remote_state"
+  component = "core"
+}
+
+locals {
+  tags = module.core.outputs.stack.tags
 }
 
 resource "aws_wafv2_ip_set" "nul_ip_set" {
@@ -13,7 +20,8 @@ resource "aws_wafv2_ip_set" "nul_ip_set" {
   description        = "NU Library IP Addresses"
   scope              = "REGIONAL"
   ip_address_version = "IPV4"
-  addresses          = var.nul_ips
+  addresses          = local.secrets.nul_ips
+  tags               = local.tags
 }
 
 resource "aws_wafv2_ip_set" "rdc_home_ip_set" {
@@ -21,13 +29,15 @@ resource "aws_wafv2_ip_set" "rdc_home_ip_set" {
   description        = "Home IP Addresses of RDC Users"
   scope              = "REGIONAL"
   ip_address_version = "IPV4"
-  addresses          = var.rdc_home_ips
+  addresses          = local.secrets.rdc_home_ips
+  tags               = local.tags
 }
 
 resource "aws_wafv2_web_acl" "staging_ip_acl" {
   name        = "staging-ip-acl"
   description = "Protect staging resources using IP restrictions"
   scope       = "REGIONAL"
+  tags        = local.tags
 
   default_action {
     block {}
@@ -83,7 +93,7 @@ resource "aws_wafv2_web_acl" "staging_ip_acl" {
 }
 
 resource "aws_wafv2_web_acl_association" "load_balancer_association" {
-  for_each        = toset(var.load_balancers)
+  for_each        = toset(local.secrets.load_balancers)
   resource_arn    = each.key
   web_acl_arn     = aws_wafv2_web_acl.staging_ip_acl.arn
 }

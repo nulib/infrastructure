@@ -4,9 +4,7 @@ terraform {
   }
 }
 
-provider "aws" {
-  region = var.aws_region
-}
+provider "aws" { }
 
 # Set up `module.core.outputs. as an alias for the VPC remote state
 # Create convenience accessors for `environment` and `namespace`
@@ -28,3 +26,6 @@ module "core" {
   source    = "../modules/remote_state"
   component = "core"
 }
+
+data "aws_region" "current" {}
+

@@ -58,13 +58,13 @@ resource "aws_security_group" "zookeeper_client" {
 }
 
 locals {
-  zookeeper_hosts = formatlist("zookeeper-%s.${module.core.outputs.vpc.service_discovery_dns_zone.name}", range(1, var.zookeeper_ensemble_size+1))
+  zookeeper_hosts = formatlist("zookeeper-%s.${module.core.outputs.vpc.service_discovery_dns_zone.name}", range(1, local.secrets.zookeeper_ensemble_size+1))
   zookeeper_ensemble = [for index, server in local.zookeeper_hosts : "server.${index+1}=${server}:2888:3888;2181"]
   zookeeper_servers  = [for server in local.zookeeper_hosts : "${server}:2181"]
 }
 
 resource "aws_ecs_task_definition" "zookeeper" {
-  count  = var.zookeeper_ensemble_size
+  count  = local.secrets.zookeeper_ensemble_size
   family = "zookeeper-${count.index+1}"
   container_definitions = jsonencode([{
     name                = "zookeeper"
@@ -102,7 +102,7 @@ resource "aws_ecs_task_definition" "zookeeper" {
       logDriver = "awslogs"
       options   = {
         awslogs-group         = aws_cloudwatch_log_group.solrcloud_logs.name
-        awslogs-region        = var.aws_region
+        awslogs-region        = data.aws_region.current.name
         awslogs-stream-prefix = "zk"
       }
     }
@@ -123,7 +123,7 @@ resource "aws_ecs_task_definition" "zookeeper" {
 }
 
 resource "aws_service_discovery_service" "zookeeper" {
-  count    = var.zookeeper_ensemble_size
+  count    = local.secrets.zookeeper_ensemble_size
   name     = "zookeeper-${count.index+1}"
 
   dns_config {
@@ -140,7 +140,7 @@ resource "aws_service_discovery_service" "zookeeper" {
 }
 
 resource "aws_ecs_service" "zookeeper" {
-  count                  = var.zookeeper_ensemble_size
+  count                  = local.secrets.zookeeper_ensemble_size
   name                   = "zookeeper-${count.index}"
   cluster                = aws_ecs_cluster.solrcloud.id
   task_definition        = aws_ecs_task_definition.zookeeper[count.index].arn

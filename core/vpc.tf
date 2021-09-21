@@ -3,11 +3,11 @@ module "vpc" {
   version   = "3.7.0"
 
   name = "${local.namespace}-vpc"
-  cidr = var.cidr_block
+  cidr = local.secrets.cidr_block
 
-  azs             = var.availability_zones
-  private_subnets = var.private_subnets
-  public_subnets  = var.public_subnets
+  azs             = local.secrets.availability_zones
+  private_subnets = local.secrets.private_subnets
+  public_subnets  = local.secrets.public_subnets
   
   enable_dns_hostnames = true
   enable_dns_support   = true
@@ -37,7 +37,7 @@ resource "aws_security_group" "endpoint_access" {
     from_port   = 0
     to_port     = 65535
     protocol    = "tcp"
-    cidr_blocks = [var.cidr_block]
+    cidr_blocks = [local.secrets.cidr_block]
   }
 
   tags = local.tags
@@ -59,7 +59,7 @@ resource "aws_security_group" "internal_http" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = [var.cidr_block]
+    cidr_blocks = [local.secrets.cidr_block]
   }
 
   tags = local.tags

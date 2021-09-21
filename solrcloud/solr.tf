@@ -115,7 +115,7 @@ resource "aws_ecs_task_definition" "solr" {
         logDriver = "awslogs"
         options   = {
           awslogs-group         = aws_cloudwatch_log_group.solrcloud_logs.name
-          awslogs-region        = var.aws_region
+          awslogs-region        = data.aws_region.current.name
           awslogs-stream-prefix = "solr"
         }
       }
@@ -164,7 +164,7 @@ resource "aws_ecs_service" "solr" {
   name                   = "solr"
   cluster                = aws_ecs_cluster.solrcloud.id
   task_definition        = aws_ecs_task_definition.solr.arn
-  desired_count          = var.solr_cluster_size
+  desired_count          = local.secrets.solr_cluster_size
   enable_execute_command = true
   launch_type            = "FARGATE"
   platform_version       = "1.4.0"
