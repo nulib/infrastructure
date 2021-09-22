@@ -1,6 +1,6 @@
 resource "aws_efs_file_system" "solr_backup_volume" {
   encrypted      = false
-  tags           = local.tags
+  tags           = merge(local.tags, { Name = "stack-solr-backup"})
 }
 
 resource "aws_efs_mount_target" "solr_backup_mount_target" {
