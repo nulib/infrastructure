@@ -22,6 +22,11 @@ This terraform project includes the core resources that form the base of NUL's s
 
 * `bastion.instance` - The ID of the bastion host EC2 instance
 * `bastion.security_group` - The ID of the bastion host security group
+* `ecs.allow_exec_command_policy_arn` - The ARN of the policy to allow users to run commands inside the container
+* `ecs.assume_role_policy` - The assume-role policy to attach to task roles
+* `ecs.registry_url` - The URL of the ECS registry for images
+* `ecs.task_execution_role_arn` - The service-linked ECS task execution role
+* `stack.account_id` - The ID of the current AWS account
 * `stack.environment`- The value of the `environment` variable
 * `stack.name` - The value of the `stack_name` variable
 * `stack.namespace` - The stack name and environment, joined by `-`
