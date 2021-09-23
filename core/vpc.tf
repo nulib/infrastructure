@@ -101,7 +101,7 @@ module "endpoints" {
       subnet_ids          = module.vpc.private_subnets
       private_dns_enabled = true
       tags                = local.tags
-    },
+    }
   }
 
   tags = {
