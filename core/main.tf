@@ -10,6 +10,7 @@ locals {
   environment   = coalesce(local.secrets.environment, substr(terraform.workspace, 0, 1))
   namespace     = join("-", [local.secrets.stack_name, local.environment])
   common_tags   = {
+    Department  = "RDC"
     Environment = terraform.workspace
     Terraform   = "true"
   }
