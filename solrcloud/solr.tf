@@ -170,7 +170,6 @@ resource "aws_ecs_service" "solr" {
   platform_version       = "1.4.0"
   
   lifecycle {
-    create_before_destroy   = true
     ignore_changes          = [desired_count]
   }
 
