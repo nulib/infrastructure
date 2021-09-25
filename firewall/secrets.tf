@@ -3,5 +3,8 @@ locals {
 }
 module "secrets" {
   source    = "../modules/secrets"
-  path      = "infrastructure/staging-waf"
+  path      = "infrastructure/firewall"
+  defaults  = jsonencode({
+    load_balancers    = []
+  })
 }

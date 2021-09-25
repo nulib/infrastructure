@@ -7,7 +7,6 @@ module "secrets" {
   defaults  = jsonencode({
     actions_enabled   = false
     alarm_actions     = []
-    load_balancers    = []
     services          = []
   })
 }
