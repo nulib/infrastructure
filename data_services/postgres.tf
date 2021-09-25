@@ -42,6 +42,11 @@ resource "aws_db_subnet_group" "db_subnet_group" {
   name_prefix   = "${local.namespace}-db-"
   subnet_ids    = module.core.outputs.vpc.private_subnets.ids
   tags          = local.tags
+
+  lifecycle {
+    create_before_destroy   = true
+    ignore_changes          = [description]
+  }
 }
 
 resource "aws_db_parameter_group" "db_parameter_group" {
