@@ -79,7 +79,7 @@ resource "aws_wafv2_web_acl" "ip_firewall" {
 }
 
 resource "aws_wafv2_web_acl_association" "ip_firewall" {
-  for_each        = toset(local.secrets.firewall_type == "IP" ? local.secrets.load_balancers : [])
-  resource_arn    = data.aws_lb.load_balancer[each.key].arn
+  for_each        = local.secrets.firewall_type == "IP" ? local.secrets.load_balancers : {}
+  resource_arn    = each.value
   web_acl_arn     = aws_wafv2_web_acl.ip_firewall[0].arn
 }

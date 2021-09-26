@@ -22,8 +22,3 @@ locals {
     }
   )
 }
-
-data "aws_lb" "load_balancer" {
-  for_each    = toset(local.secrets.load_balancers)
-  name        = each.key
-}
