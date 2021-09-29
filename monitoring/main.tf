@@ -35,6 +35,9 @@ locals {
 
 resource "aws_cloudwatch_metric_alarm" "load_balancer_5xx" {
   for_each              = toset(local.secrets.load_balancers)
+
+  actions_enabled       = local.secrets.actions_enabled
+  alarm_actions         = local.secrets.alarm_actions
   alarm_name            = "${each.key}-LoadBalancer5XX"
   comparison_operator   = "GreaterThanOrEqualToThreshold"
   evaluation_periods    = 3
