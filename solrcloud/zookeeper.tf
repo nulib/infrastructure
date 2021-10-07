@@ -58,20 +58,20 @@ resource "aws_security_group" "zookeeper_client" {
 }
 
 locals {
-  zookeeper_hosts = formatlist("zookeeper-%s.${module.core.outputs.vpc.service_discovery_dns_zone.name}", range(1, local.secrets.zookeeper_ensemble_size+1))
+  zookeeper_hosts = formatlist("zookeeper-%s.${module.core.outputs.vpc.service_discovery_dns_zone.name}", range(1, local.secrets.zookeeper.ensemble_size+1))
   zookeeper_ensemble = [for index, server in local.zookeeper_hosts : "server.${index+1}=${server}:2888:3888;2181"]
   zookeeper_servers  = [for server in local.zookeeper_hosts : "${server}:2181"]
 }
 
 resource "aws_ecs_task_definition" "zookeeper" {
-  count  = local.secrets.zookeeper_ensemble_size
+  count  = local.secrets.zookeeper.ensemble_size
   family = "zookeeper-${count.index+1}"
   container_definitions = jsonencode([{
     name                = "zookeeper"
     image               = "${module.core.outputs.ecs.registry_url}/zookeeper:latest"
     essential           = true
-    cpu                 = 256
-    memoryReservation   = 512
+    cpu                 = local.secrets.zookeeper.cpu
+    memoryReservation   = local.secrets.zookeeper.memory
     environment = [
       { name = "WAIT_SERVERS",               value = join(" ", local.zookeeper_hosts) },
       { name = "ZOO_4LW_COMMANDS_WHITELIST", value = "*" },
@@ -117,13 +117,13 @@ resource "aws_ecs_task_definition" "zookeeper" {
   execution_role_arn       = module.core.outputs.ecs.task_execution_role_arn
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
-  memory                   = 512
+  cpu                      = local.secrets.zookeeper.cpu
+  memory                   = local.secrets.zookeeper.memory
   tags                     = local.tags
 }
 
 resource "aws_service_discovery_service" "zookeeper" {
-  count    = local.secrets.zookeeper_ensemble_size
+  count    = local.secrets.zookeeper.ensemble_size
   name     = "zookeeper-${count.index+1}"
 
   dns_config {
@@ -140,7 +140,7 @@ resource "aws_service_discovery_service" "zookeeper" {
 }
 
 resource "aws_ecs_service" "zookeeper" {
-  count                  = local.secrets.zookeeper_ensemble_size
+  count                  = local.secrets.zookeeper.ensemble_size
   name                   = "zookeeper-${count.index}"
   cluster                = aws_ecs_cluster.solrcloud.id
   task_definition        = aws_ecs_task_definition.zookeeper[count.index].arn

@@ -9,8 +9,12 @@ This terraform project includes the resources required to get the Solrcloud (Sol
 ## Secrets
 
 * `state_bucket` - The bucket containing remote state files (default: `nulterra-state-sandbox`)
-* `zookeeper_ensemble_size` - The number of Zookeeper nodes to run (default: `3`)
-* `solr_cluster_size` - The number of Solr nodes to run (default: `4`)
+* `zookeeper.ensemble_size` - The number of Zookeeper nodes to run (default: `3`)
+* `zookeeper.cpu` - The amount of CPU to reserve for each zookeeper instance (default: `256`)
+* `zookeeper.memory` - The amount of RAM to reserve for each zookeeper instance (default: `512`)
+* `solr.cluster_size` - The number of Solr nodes to run (default: `4`)
+* `solr.cpu` - The amount of CPU to reserve for each solr instance (default: `1024`)
+* `solr.memory` - The amount of RAM to reserve for each solr instance (default: `2048`)
 
 ## Outputs
 

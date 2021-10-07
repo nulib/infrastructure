@@ -98,9 +98,10 @@ resource "aws_ecs_task_definition" "solr" {
       name                = "solr"
       image               = "${module.core.outputs.ecs.registry_url}/solr:7.5"
       essential           = true
-      cpu                 = 1000
-      memoryReservation   = 2000
+      cpu                 = local.secrets.solr.cpu
+      memoryReservation   = local.secrets.solr.memory
       environment = [
+        { name = "SOLR_HEAP",       value = "${local.secrets.solr.memory * 0.9765625}m" },
         { name = "SOLR_MODE",       value = "solrcloud"  },
         { name = "ZK_HOST",         value = join(",", local.zookeeper_servers) }
       ]
@@ -139,8 +140,8 @@ resource "aws_ecs_task_definition" "solr" {
   execution_role_arn       = module.core.outputs.ecs.task_execution_role_arn
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = 1024
-  memory                   = 2048
+  cpu                      = local.secrets.solr.cpu
+  memory                   = local.secrets.solr.memory
   tags                     = local.tags
 }
 
@@ -164,7 +165,36 @@ resource "aws_ecs_service" "solr" {
   name                   = "solr"
   cluster                = aws_ecs_cluster.solrcloud.id
   task_definition        = aws_ecs_task_definition.solr.arn
-  desired_count          = local.secrets.solr_cluster_size
+  desired_count          = local.secrets.solr.cluster_size
+  enable_execute_command = true
+  launch_type            = "FARGATE"
+  platform_version       = "1.4.0"
+  
+  lifecycle {
+    ignore_changes          = [desired_count]
+  }
+
+  network_configuration {
+    subnets          = module.core.outputs.vpc.private_subnets.ids
+    security_groups  = [
+      aws_security_group.solr_service.id,
+      aws_security_group.zookeeper_client.id
+    ]
+    assign_public_ip = false
+  }
+
+  service_registries {
+    registry_arn = aws_service_discovery_service.solr.arn
+  }
+
+  tags = local.tags
+}
+
+resource "aws_ecs_service" "solr_extra" {
+  name                   = "solr-extra"
+  cluster                = aws_ecs_cluster.solrcloud.id
+  task_definition        = aws_ecs_task_definition.solr.arn
+  desired_count          = 0
   enable_execute_command = true
   launch_type            = "FARGATE"
   platform_version       = "1.4.0"
