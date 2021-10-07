@@ -50,8 +50,9 @@ resource "aws_ecs_cluster" "fcrepo" {
 }
 
 resource "aws_cloudwatch_log_group" "fcrepo_logs" {
-  name = "/ecs/fcrepo"
-  tags = local.tags
+  name                = "/ecs/fcrepo"
+  retention_in_days   = 3
+  tags                = local.tags
 }
 
 resource "aws_s3_bucket" "fedora_binary_bucket" {

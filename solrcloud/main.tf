@@ -35,6 +35,7 @@ resource "aws_ecs_cluster" "solrcloud" {
 }
 
 resource "aws_cloudwatch_log_group" "solrcloud_logs" {
-  name = "/ecs/solrcloud"
-  tags = local.tags
+  name                = "/ecs/solrcloud"
+  retention_in_days   = 3
+  tags                = local.tags
 }
