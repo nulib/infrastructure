@@ -1,0 +1,34 @@
+#!/bin/bash
+
+cluster="solrcloud"
+group="extra:solr"
+
+solr_network_config() {
+  aws ecs describe-services --cluster ${cluster} --service solr | jq -cM '.services[0].networkConfiguration'
+}
+
+solr_tasks() {
+  aws ecs list-tasks --cluster ${cluster} --family solr | jq -r '.taskArns | join(" ")'
+}
+
+case "$1" in
+  start)
+    networkconfig=$(solr_network_config)
+    aws ecs run-task --platform-version 1.4.0 --cluster ${cluster} --task-definition solr --launch-type FARGATE --group "${group}" --network-configuration ${networkconfig} | jq -r '.tasks[].taskArn'
+    ;;
+
+  status)
+    aws ecs describe-tasks --cluster ${cluster} --tasks $(solr_tasks) | jq -r '.tasks[] | select(.group == "'${group}'") | "\(.taskArn) (\(.lastStatus))"'
+    ;;
+
+  stop)
+    task_arns=$(aws ecs describe-tasks --cluster ${cluster} --tasks $(solr_tasks) | jq -r '.tasks[] | select(.group == "'${group}'") | .taskArn')
+    for task_arn in $task_arns; do
+      aws ecs stop-task --cluster ${cluster} --task ${task_arn} | jq -r '.task | "\(.taskArn) (\(.desiredStatus))"'
+    done
+    ;;
+
+  *)
+    echo "Usage: extra-node [start|stop]"
+esac
+

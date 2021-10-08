@@ -189,32 +189,3 @@ resource "aws_ecs_service" "solr" {
 
   tags = local.tags
 }
-
-resource "aws_ecs_service" "solr_extra" {
-  name                   = "solr-extra"
-  cluster                = aws_ecs_cluster.solrcloud.id
-  task_definition        = aws_ecs_task_definition.solr.arn
-  desired_count          = 0
-  enable_execute_command = true
-  launch_type            = "FARGATE"
-  platform_version       = "1.4.0"
-  
-  lifecycle {
-    ignore_changes          = [desired_count]
-  }
-
-  network_configuration {
-    subnets          = module.core.outputs.vpc.private_subnets.ids
-    security_groups  = [
-      aws_security_group.solr_service.id,
-      aws_security_group.zookeeper_client.id
-    ]
-    assign_public_ip = false
-  }
-
-  service_registries {
-    registry_arn = aws_service_discovery_service.solr.arn
-  }
-
-  tags = local.tags
-}
