@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        component: [core, data_services, fcrepo, monitoring, solrcloud, staging-waf]
+        component: [core, data_services, fcrepo, firewall, monitoring, solrcloud]
 
     steps:
     - uses: actions/checkout@v2
