@@ -5,6 +5,6 @@ module "secrets" {
   source    = "../modules/secrets"
   path      = "infrastructure/firewall"
   defaults  = jsonencode({
-    load_balancers    = []
+    resources    = {}
   })
 }
