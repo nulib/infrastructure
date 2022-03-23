@@ -96,12 +96,12 @@ resource "aws_ecs_task_definition" "solr" {
   container_definitions = jsonencode([
     {
       name                = "solr"
-      image               = "${module.core.outputs.ecs.registry_url}/solr:7.5"
+      image               = "${module.core.outputs.ecs.registry_url}/solr:8.11-slim"
       essential           = true
-      cpu                 = local.secrets.solr.cpu
-      memoryReservation   = local.secrets.solr.memory
+      cpu                 = 1024
       environment = [
-        { name = "SOLR_HEAP",       value = "${local.secrets.solr.memory * 0.9765625}m" },
+        { name = "SOLR_OPTS",       value = "-Dsolr.allowPaths=/data/backup" },
+        { name = "SOLR_HEAP",       value = "${1024 * 0.9765625}m" },
         { name = "SOLR_MODE",       value = "solrcloud"  },
         { name = "ZK_HOST",         value = join(",", local.zookeeper_servers) }
       ]
@@ -140,8 +140,8 @@ resource "aws_ecs_task_definition" "solr" {
   execution_role_arn       = module.core.outputs.ecs.task_execution_role_arn
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = local.secrets.solr.cpu
-  memory                   = local.secrets.solr.memory
+  cpu                      = 1024
+  memory                   = 2048
   tags                     = local.tags
 }
 
