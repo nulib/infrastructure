@@ -66,59 +66,60 @@ locals {
 resource "aws_ecs_task_definition" "zookeeper" {
   count  = local.secrets.zookeeper.ensemble_size
   family = "zookeeper-${count.index+1}"
-  container_definitions = jsonencode([{
-    name                = "zookeeper"
-    image               = "${module.core.outputs.ecs.registry_url}/zookeeper:latest"
-    essential           = true
-    cpu                 = local.secrets.zookeeper.cpu
-    memoryReservation   = local.secrets.zookeeper.memory
-    environment = [
-      { name = "WAIT_SERVERS",               value = join(" ", local.zookeeper_hosts) },
-      { name = "ZOO_4LW_COMMANDS_WHITELIST", value = "*" },
-      { name = "ZOO_INIT_LIMIT",             value = "30" },
-      { name = "ZOO_MY_ID",                  value = tostring(count.index+1) },
-      { name = "ZOO_SERVERS",                value = join(" ", local.zookeeper_ensemble) },
-      { name = "ZOO_STANDALONE_ENABLED",     value = "false" }
-    ]
-    portMappings = [{
-        hostPort        = 8080
-        containerPort   = 8080
-      },
-      {
-        hostPort        = 2181
-        containerPort   = 2181
-      },
-      {
-        hostPort        = 2888
-        containerPort   = 2888
-      },
-      {
-        hostPort        = 3888
-        containerPort   = 3888
+  container_definitions = jsonencode([
+    {
+      name                = "zookeeper"
+      image               = "${module.core.outputs.ecs.registry_url}/zookeeper:3.7"
+      essential           = true
+      cpu                 = 256
+      environment = [
+        { name = "ZOO_4LW_COMMANDS_WHITELIST", value = "*" },
+        { name = "ZOO_INIT_LIMIT",             value = "30" },
+        { name = "ZOO_MY_ID",                  value = tostring(count.index+1) },
+        { name = "ZOO_SERVERS",                value = replace(join(" ", local.zookeeper_ensemble), "zookeeper-${count.index+1}.${module.core.outputs.vpc.service_discovery_dns_zone.name}", "0.0.0.0") },
+        { name = "ZOO_STANDALONE_ENABLED",     value = "false" },
+        { name = "ZOO_CFG_EXTRA",              value = "electionPortBindRetry=0" }
+      ]
+      portMappings = [{
+          hostPort        = 8080
+          containerPort   = 8080
+        },
+        {
+          hostPort        = 2181
+          containerPort   = 2181
+        },
+        {
+          hostPort        = 2888
+          containerPort   = 2888
+        },
+        {
+          hostPort        = 3888
+          containerPort   = 3888
+        }
+      ]
+      readonlyRootFilesystem = false
+      logConfiguration = {
+        logDriver = "awslogs"
+        options   = {
+          awslogs-group         = aws_cloudwatch_log_group.solrcloud_logs.name
+          awslogs-region        = data.aws_region.current.name
+          awslogs-stream-prefix = "zk"
+        }
       }
-    ]
-    readonlyRootFilesystem = false
-    logConfiguration = {
-      logDriver = "awslogs"
-      options   = {
-        awslogs-group         = aws_cloudwatch_log_group.solrcloud_logs.name
-        awslogs-region        = data.aws_region.current.name
-        awslogs-stream-prefix = "zk"
+      healthCheck = {
+        command  = ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/commands/stat"]
+        interval = 30
+        retries  = 3
+        timeout  = 5
       }
     }
-    healthCheck = {
-      command  = ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/commands/stat"]
-      interval = 30
-      retries  = 3
-      timeout  = 5
-    }
-  }])
+  ])
   task_role_arn            = aws_iam_role.zookeeper_task_role.arn
   execution_role_arn       = module.core.outputs.ecs.task_execution_role_arn
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = local.secrets.zookeeper.cpu
-  memory                   = local.secrets.zookeeper.memory
+  cpu                      = 256
+  memory                   = 512
   tags                     = local.tags
 }
 
