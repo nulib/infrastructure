@@ -18,10 +18,12 @@ This terraform project includes the resources required for the main datastore se
 * `elasticsearch.full_policy_arn` - The ARN of the policy granting read/write access to Elasticsearch
 * `elasticsearch.read_policy_arn` - The ARN of the policy granting read access to Elasticsearch
 * `elasticsearch.arn` - The ARN of the Elasticsearch domain
+* `elasticsearch.domain_name` - The name of the Elasticsearch domain
 * `elasticsearch.endpoint` - The URL of the Elasticsearch service
 * `postgres.address` - The database server address
 * `postgres.port` - The database server port
 * `postgres.client_security_group` - The ID of the security group for database clients
+* `postgres.instance_name` - The name of the database instance
 * `postgres.admin_user` - The database superuser name
 * `postgres.admin_password` - The database superuser password
 * `redis.address` - The address of the Redis cluster
