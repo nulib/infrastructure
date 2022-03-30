@@ -57,6 +57,7 @@ data "aws_iam_policy_document" "elasticsearch_http_access" {
   }
 }
 
+# tflint-ignore: aws_resource_missing_tags
 resource "aws_iam_service_linked_role" "elasticsearch" {
   aws_service_name = "es.amazonaws.com"
 }
