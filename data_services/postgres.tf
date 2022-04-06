@@ -51,7 +51,7 @@ resource "aws_db_subnet_group" "db_subnet_group" {
 
 resource "aws_db_parameter_group" "db_parameter_group" {
   name_prefix   = "${local.namespace}-db-"
-  family        = "postgres${element(split(".", local.secrets.postgres_version), 0)}"
+  family        = "postgres${element(split(".", var.postgres_version), 0)}"
   tags          = local.tags
   
   parameter {
@@ -71,8 +71,8 @@ resource "aws_db_instance" "db" {
   allocated_storage         = 100
   apply_immediately         = true
   engine                    = "postgres"
-  engine_version            = local.secrets.postgres_version
-  instance_class            = "db.t3.medium"
+  engine_version            = var.postgres_version
+  instance_class            = var.instance_class
   name                      = "${module.core.outputs.stack.name}db"
   username                  = "dbadmin"
   parameter_group_name      = aws_db_parameter_group.db_parameter_group.name

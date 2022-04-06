@@ -1,0 +1,7 @@
+#!/bin/bash
+
+backup=$1
+collection=${2:-$1}
+echo "Restoring ${collection} from ${backup}"
+curl -v "$SOLR_BASE_URL/admin/collections?action=RESTORE&location=/data/backup&collection=${collection}&name=${backup}"
+

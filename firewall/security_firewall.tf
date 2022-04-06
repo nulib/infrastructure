@@ -1,5 +1,5 @@
 locals {
-  count_only     = local.secrets.firewall_type != "SECURITY"
+  count_only     = var.firewall_type != "SECURITY"
   excluded_rules = {
     AWSManagedRulesCommonRuleSet = ["CrossSiteScripting_BODY", "GenericRFI_BODY", "SizeRestrictions_BODY"]
     AWSManagedRulesKnownBadInputsRuleSet = []
@@ -99,7 +99,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 }
 
 resource "aws_wafv2_web_acl_association" "security_firewall" {
-  for_each        = local.secrets.resources
+  for_each        = var.resources
   resource_arn    = each.value
   web_acl_arn     = aws_wafv2_web_acl.security_firewall.arn
 }

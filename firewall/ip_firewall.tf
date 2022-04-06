@@ -1,35 +1,35 @@
 resource "aws_wafv2_ip_set" "nul_ip_set" {
-  count              = local.secrets.firewall_type == "IP" ? 1 : 0
+  count              = var.firewall_type == "IP" ? 1 : 0
   name               = "nul-ips"
   description        = "NU Library IPv4 Addresses"
   scope              = "REGIONAL"
   ip_address_version = "IPV4"
-  addresses          = local.secrets.nul_ips
+  addresses          = var.nul_ips
   tags               = local.tags
 }
 
 resource "aws_wafv2_ip_set" "nul_ipv6_set" {
-  count              = local.secrets.firewall_type == "IP" ? 1 : 0
+  count              = var.firewall_type == "IP" ? 1 : 0
   name               = "nul-ips-v6"
   description        = "NU Library IPv6 Addresses"
   scope              = "REGIONAL"
   ip_address_version = "IPV6"
-  addresses          = local.secrets.nul_ips_v6
+  addresses          = var.nul_ips_v6
   tags               = local.tags
 }
 
 resource "aws_wafv2_ip_set" "rdc_home_ip_set" {
-  count              = local.secrets.firewall_type == "IP" ? 1 : 0
+  count              = var.firewall_type == "IP" ? 1 : 0
   name               = "rdc-home-ips"
   description        = "Home IP Addresses of RDC Users"
   scope              = "REGIONAL"
   ip_address_version = "IPV4"
-  addresses          = local.secrets.rdc_home_ips
+  addresses          = var.rdc_home_ips
   tags               = local.tags
 }
 
 resource "aws_wafv2_web_acl" "ip_firewall" {
-  count       = local.secrets.firewall_type == "IP" ? 1 : 0
+  count       = var.firewall_type == "IP" ? 1 : 0
   name        = "staging-ip-acl"
   description = "Protect staging resources using IP restrictions"
   scope       = "REGIONAL"
@@ -109,7 +109,7 @@ resource "aws_wafv2_web_acl" "ip_firewall" {
 }
 
 resource "aws_wafv2_web_acl_association" "ip_firewall" {
-  for_each        = local.secrets.firewall_type == "IP" ? local.secrets.resources : {}
+  for_each        = var.firewall_type == "IP" ? var.resources : {}
   resource_arn    = each.value
   web_acl_arn     = aws_wafv2_web_acl.ip_firewall[0].arn
 }

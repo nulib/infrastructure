@@ -1,16 +1,9 @@
-locals {
-  secrets = module.secrets.vars
+variable "zookeeper_ensemble_size" {
+  type    = number
+  default = 3
 }
-module "secrets" {
-  source    = "../modules/secrets"
-  path      = "infrastructure/core"
-  defaults  = jsonencode({
-    zookeeper = {
-      ensemble_size = 3
-    }
 
-    solr = {
-      cluster_size  = 4
-    }
-  })
+variable "solr_cluster_size" {
+  type    = number
+  default = 4
 }

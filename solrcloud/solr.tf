@@ -165,7 +165,7 @@ resource "aws_ecs_service" "solr" {
   name                   = "solr"
   cluster                = aws_ecs_cluster.solrcloud.id
   task_definition        = aws_ecs_task_definition.solr.arn
-  desired_count          = local.secrets.solr.cluster_size
+  desired_count          = var.solr_cluster_size
   enable_execute_command = true
   launch_type            = "FARGATE"
   platform_version       = "1.4.0"

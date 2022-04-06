@@ -1,0 +1,6 @@
+#!/bin/bash
+
+collection=$1
+echo "Backing up ${collection}"
+curl "$SOLR_BASE_URL/admin/collections?action=BACKUP&name=${collection}&collection=${collection}&maxNumBackupPoints=14&location=/data/backup"
+

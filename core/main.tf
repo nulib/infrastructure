@@ -7,15 +7,15 @@ terraform {
 provider "aws" { }
 
 locals {
-  environment   = coalesce(local.secrets.environment, substr(terraform.workspace, 0, 1))
-  namespace     = join("-", [local.secrets.stack_name, local.environment])
+  environment   = coalesce(var.environment, substr(terraform.workspace, 0, 1))
+  namespace     = join("-", [var.stack_name, local.environment])
   common_tags   = {
     Department  = "RDC"
     Environment = terraform.workspace
     Terraform   = "true"
   }
   tags          = merge(
-    merge(local.secrets.tags, local.common_tags),
+    merge(var.tags, local.common_tags),
     {
       Component   = "core",
       Git         = "github.com/nulib/infrastructure"

@@ -23,21 +23,21 @@ locals {
 }
 
 data "aws_lb" "load_balancer" {
-  for_each    = toset(local.secrets.load_balancers)
+  for_each    = toset(var.load_balancers)
   name        = each.key
 }
 
 locals {
-  keys = flatten([ for cluster, services in local.secrets.services : [ for service in services : "${cluster}.${service}" ] ])
-  values = flatten([ for cluster, services in local.secrets.services : [ for service in services : { cluster: cluster, service: service } ] ])
+  keys = flatten([ for cluster, services in var.services : [ for service in services : "${cluster}.${service}" ] ])
+  values = flatten([ for cluster, services in var.services : [ for service in services : { cluster: cluster, service: service } ] ])
   services = zipmap(local.keys, local.values)
 }
 
 resource "aws_cloudwatch_metric_alarm" "load_balancer_5xx" {
-  for_each              = toset(local.secrets.load_balancers)
+  for_each              = toset(var.load_balancers)
 
-  actions_enabled       = local.secrets.actions_enabled
-  alarm_actions         = local.secrets.alarm_actions
+  actions_enabled       = var.actions_enabled
+  alarm_actions         = var.alarm_actions
   alarm_name            = "${each.key}-LoadBalancer5XX"
   comparison_operator   = "GreaterThanOrEqualToThreshold"
   evaluation_periods    = 3
@@ -58,8 +58,8 @@ resource "aws_cloudwatch_metric_alarm" "load_balancer_5xx" {
 resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
   for_each              = local.services
 
-  actions_enabled       = local.secrets.actions_enabled
-  alarm_actions         = local.secrets.alarm_actions
+  actions_enabled       = var.actions_enabled
+  alarm_actions         = var.alarm_actions
   alarm_name            = "${each.value.service}-CPUUtilization"
   comparison_operator   = "GreaterThanOrEqualToThreshold"
   evaluation_periods    = 3
@@ -80,8 +80,8 @@ resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
 resource "aws_cloudwatch_metric_alarm" "memory_utilization" {
   for_each              = local.services
 
-  actions_enabled       = local.secrets.actions_enabled
-  alarm_actions         = local.secrets.alarm_actions
+  actions_enabled       = var.actions_enabled
+  alarm_actions         = var.alarm_actions
   alarm_name            = "${each.value.service}-MemoryUtilization"
   comparison_operator   = "GreaterThanOrEqualToThreshold"
   evaluation_periods    = 3
