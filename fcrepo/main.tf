@@ -189,8 +189,8 @@ resource "aws_ecs_task_definition" "fcrepo" {
       name                = "fcrepo"
       image               = "${module.core.outputs.ecs.registry_url}/fcrepo4:4.7.5-s3multipart"
       essential           = true
-      cpu                 = 1000
-      memoryReservation   = 3000
+      cpu                 = var.cpu
+      memoryReservation   = var.memory
       environment = [
         { 
           name  = "MODESHAPE_CONFIG",
@@ -233,8 +233,8 @@ resource "aws_ecs_task_definition" "fcrepo" {
   execution_role_arn       = module.core.outputs.ecs.task_execution_role_arn
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = 1024
-  memory                   = 3072
+  cpu                      = var.cpu
+  memory                   = var.memory
   tags                     = local.tags
 }
 
