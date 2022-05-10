@@ -74,9 +74,10 @@ module "endpoints" {
   endpoints = {
     s3 = {
       # interface endpoint
-      service             = "s3"
-      subnet_ids          = module.vpc.private_subnets
-      tags                = local.tags
+      route_table_ids   = [module.vpc.vpc_main_route_table_id]
+      service           = "s3"
+      service_type      = "Gateway"
+      tags              = local.tags
     },
     ssm = {
       service             = "ssm"
