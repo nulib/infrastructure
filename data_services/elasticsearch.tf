@@ -1,35 +1,35 @@
 resource "aws_security_group" "elasticsearch" {
-  name   = "${local.namespace}-elasticsearch"
-  tags   = local.tags
+  name = "${local.namespace}-elasticsearch"
+  tags = local.tags
 }
 
 resource "aws_security_group_rule" "elasticsearch_egress" {
-  security_group_id  = aws_security_group.elasticsearch.id
-  type               = "egress"
-  from_port          = "0"
-  to_port            = "0"
-  protocol           = "-1"
-  cidr_blocks        = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.elasticsearch.id
+  type              = "egress"
+  from_port         = "0"
+  to_port           = "0"
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
 }
 
 resource "aws_security_group_rule" "elasticsearch_ingress" {
-  security_group_id  = aws_security_group.elasticsearch.id
-  type               = "ingress"
-  from_port          = "443"
-  to_port            = "443"
-  protocol           = "tcp"
-  cidr_blocks        = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.elasticsearch.id
+  type              = "ingress"
+  from_port         = "443"
+  to_port           = "443"
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
 }
 
-resource "aws_elasticsearch_domain" "elasticsearch" {
-  domain_name           = "${local.namespace}-common-index"
-  elasticsearch_version = "6.8"
-  tags                  = local.tags
-  advanced_options      = {
+resource "aws_opensearch_domain" "elasticsearch" {
+  domain_name    = "${local.namespace}-common-index"
+  engine_version = "OpenSearch_1.2"
+  tags           = local.tags
+  advanced_options = {
     "rest.action.multi.allow_explicit_index" = "true"
-  }  
+  }
   cluster_config {
-    instance_type  = "t2.medium.elasticsearch"
+    instance_type  = "t2.medium.search"
     instance_count = 2
   }
   ebs_options {
@@ -46,9 +46,9 @@ data "aws_caller_identity" "current_user" {}
 
 data "aws_iam_policy_document" "elasticsearch_http_access" {
   statement {
-    sid       = "allow-from-aws"
-    effect    = "Allow"
-    actions   = ["es:*"]
+    sid     = "allow-from-aws"
+    effect  = "Allow"
+    actions = ["es:*"]
     principals {
       type        = "AWS"
       identifiers = ["arn:aws:iam::${data.aws_caller_identity.current_user.account_id}:root"]
@@ -69,9 +69,9 @@ resource "aws_s3_bucket" "elasticsearch_snapshot_bucket" {
 }
 
 resource "aws_iam_role" "elasticsearch_snapshot_bucket_access" {
-  name                  = "${local.namespace}-es-snapshot-role"
-  assume_role_policy    = data.aws_iam_policy_document.elasticsearch_snapshot_assume_role.json
-  tags                  = local.tags
+  name               = "${local.namespace}-es-snapshot-role"
+  assume_role_policy = data.aws_iam_policy_document.elasticsearch_snapshot_assume_role.json
+  tags               = local.tags
 }
 
 resource "aws_iam_role_policy" "elasticsearch_snapshot_bucket_access" {
@@ -105,8 +105,8 @@ data "aws_iam_policy_document" "elasticsearch_snapshot_bucket_access" {
   }
 
   statement {
-    effect    = "Allow"
-    actions   = [
+    effect = "Allow"
+    actions = [
       "s3:PutObject",
       "s3:GetObject",
       "s3:DeleteObject"
@@ -117,11 +117,11 @@ data "aws_iam_policy_document" "elasticsearch_snapshot_bucket_access" {
 
 data "aws_iam_policy_document" "elasticsearch_read_access" {
   statement {
-    effect    = "Allow"
-    actions   = ["es:ESHttpGet"]
+    effect  = "Allow"
+    actions = ["es:ESHttpGet"]
     resources = [
-      aws_elasticsearch_domain.elasticsearch.arn,
-      "${aws_elasticsearch_domain.elasticsearch.arn}/*"
+      aws_opensearch_domain.elasticsearch.arn,
+      "${aws_opensearch_domain.elasticsearch.arn}/*"
     ]
   }
 }
@@ -134,11 +134,11 @@ resource "aws_iam_policy" "elasticsearch_read_access" {
 
 data "aws_iam_policy_document" "elasticsearch_full_access" {
   statement {
-    effect    = "Allow"
-    actions   = ["es:ESHttp*"]
+    effect  = "Allow"
+    actions = ["es:ESHttp*"]
     resources = [
-      aws_elasticsearch_domain.elasticsearch.arn,
-      "${aws_elasticsearch_domain.elasticsearch.arn}/*"
+      aws_opensearch_domain.elasticsearch.arn,
+      "${aws_opensearch_domain.elasticsearch.arn}/*"
     ]
   }
 }

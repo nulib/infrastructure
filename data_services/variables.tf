@@ -1,6 +1,6 @@
 variable "postgres_version" {
   type    = string
-  default = "13.3"
+  default = "13.4"
 }
 
 variable "allocated_storage" {
