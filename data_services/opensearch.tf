@@ -22,21 +22,30 @@ resource "aws_security_group_rule" "elasticsearch_ingress" {
 }
 
 resource "aws_opensearch_domain" "elasticsearch" {
-  domain_name    = "${local.namespace}-common-index"
-  engine_version = "OpenSearch_1.2"
-  tags           = local.tags
+  domain_name       = "${local.namespace}-common-index"
+  engine_version    = "OpenSearch_1.2"
+  access_policies   = data.aws_iam_policy_document.elasticsearch_http_access.json
+  tags              = local.tags
+
   advanced_options = {
     "rest.action.multi.allow_explicit_index" = "true"
   }
+
   cluster_config {
-    instance_type  = "t2.medium.search"
-    instance_count = 2
+    instance_type             = "t3.medium.search"
+    instance_count            = var.opensearch_cluster_nodes
+    zone_awareness_enabled    = true
+    zone_awareness_config {
+      availability_zone_count = 3
+    }
   }
+
   ebs_options {
     ebs_enabled = "true"
-    volume_size = 10
+    volume_size = var.opensearch_volume_size
   }
-  access_policies = data.aws_iam_policy_document.elasticsearch_http_access.json
+
+
   lifecycle {
     ignore_changes = [ebs_options]
   }
@@ -64,8 +73,12 @@ resource "aws_iam_service_linked_role" "elasticsearch" {
 
 resource "aws_s3_bucket" "elasticsearch_snapshot_bucket" {
   bucket = "${local.namespace}-es-snapshots"
-  acl    = "private"
   tags   = local.tags
+}
+
+resource "aws_s3_bucket_acl" "elasticsearch_snapshot_bucket" {
+  bucket = aws_s3_bucket.elasticsearch_snapshot_bucket.id
+  acl    = "private"
 }
 
 resource "aws_iam_role" "elasticsearch_snapshot_bucket_access" {

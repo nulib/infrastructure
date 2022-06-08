@@ -13,3 +13,12 @@ variable "instance_class" {
   default = "db.t3.medium"
 }
 
+variable "opensearch_cluster_nodes" {
+  type    = number
+  default = 3
+}
+
+variable "opensearch_volume_size" {
+  type    = number
+  default = 10
+}
