@@ -1,6 +1,6 @@
 variable "postgres_version" {
   type    = string
-  default = "13.3"
+  default = "13.4"
 }
 
 variable "allocated_storage" {
@@ -13,3 +13,12 @@ variable "instance_class" {
   default = "db.t3.medium"
 }
 
+variable "opensearch_cluster_nodes" {
+  type    = number
+  default = 3
+}
+
+variable "opensearch_volume_size" {
+  type    = number
+  default = 10
+}
