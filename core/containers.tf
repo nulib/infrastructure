@@ -1,5 +1,5 @@
 locals {
-  repositories = toset(["acme-cert", "arch", "avr", "fcrepo4", "meadow", "solr", "zookeeper"])
+  repositories = toset(["arch", "avr", "fcrepo4", "meadow", "solr", "zookeeper"])
 }
 
 resource "aws_ecr_repository" "nulib_images" {
