@@ -1,3 +1,8 @@
+variable "digital_collections_zone_name" {
+  type    = string
+  default = ""
+}
+
 variable "hosted_zone_name" {
   type    = string
 }
