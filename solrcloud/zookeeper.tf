@@ -161,7 +161,7 @@ resource "aws_ecs_service" "zookeeper" {
   }
 
   service_registries {
-    registry_arn = aws_service_discovery_service.zookeeper.*.arn[count.index]
+    registry_arn = aws_service_discovery_service.zookeeper[*].arn[count.index]
   }
 
   tags = local.tags

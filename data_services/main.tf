@@ -2,6 +2,12 @@ terraform {
   backend "s3" {
     key    = "data_services.tfstate"
   }
+
+  required_providers {
+    aws    = "~> 4.0"
+    random = ">= 3.4.0"
+  }
+  required_version = ">= 1.3.0"
 }
 
 provider "aws" { }
@@ -10,7 +16,7 @@ provider "aws" { }
 # Create convenience accessors for `environment` and `namespace`
 # Merge `Component: data_services` into the stack tags
 locals {
-  environment   = module.core.outputs.stack.environment
+#  environment   = module.core.outputs.stack.environment
   namespace     = module.core.outputs.stack.namespace
   tags          = merge(
     module.core.outputs.stack.tags, 

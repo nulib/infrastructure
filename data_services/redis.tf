@@ -50,5 +50,5 @@ resource "aws_route53_record" "redis" {
   name    = "redis.${module.core.outputs.vpc.private_dns_zone.name}"
   type    = "CNAME"
   ttl     = 900
-  records = aws_elasticache_cluster.redis.cache_nodes.*.address
+  records = aws_elasticache_cluster.redis.cache_nodes[*].address
 }
