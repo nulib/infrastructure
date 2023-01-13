@@ -3,6 +3,11 @@ variable "digital_collections_zone_name" {
   default = ""
 }
 
+variable "additional_environment_zones" {
+  type    = list(string)
+  default = []
+}
+
 variable "hosted_zone_name" {
   type    = string
 }

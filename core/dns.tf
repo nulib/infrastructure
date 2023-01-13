@@ -1,4 +1,4 @@
-data "aws_route53_zone" "hosted_zone" {
+resource "aws_route53_zone" "hosted_zone" {
   name = var.hosted_zone_name
 }
 
@@ -15,7 +15,7 @@ resource "aws_route53_zone" "private_zone" {
 }
 
 resource "aws_route53_record" "public_zone" {
-  zone_id = data.aws_route53_zone.hosted_zone.id
+  zone_id = aws_route53_zone.hosted_zone.id
   type    = "NS"
   name    = aws_route53_zone.public_zone.name
   records = aws_route53_zone.public_zone.name_servers
@@ -28,4 +28,7 @@ resource "aws_service_discovery_private_dns_namespace" "private_service_discover
   vpc         = module.vpc.vpc_id
 }
 
+resource "aws_route53_zone" "dc_zone" {
+  count   = var.digital_collections_zone_name == "" ? 0 : 1
+  name    = var.digital_collections_zone_name
 }

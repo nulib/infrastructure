@@ -1,3 +1,9 @@
+output "acm" {
+  value = {
+    certificate_arn = aws_acm_certificate.wildcard_cert.arn
+  }
+}
+
 output "bastion" {
   value = {
     hostname          = "bastion.${aws_route53_zone.public_zone.name}"
