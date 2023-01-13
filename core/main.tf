@@ -9,7 +9,11 @@ terraform {
   required_version = ">= 1.3.0"
 }
 
-provider "aws" {}
+provider "aws" {
+  default_tags {
+    tags = local.tags
+  }
+}
 
 locals {
   environment   = coalesce(var.environment, substr(terraform.workspace, 0, 1))

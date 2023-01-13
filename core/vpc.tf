@@ -25,8 +25,7 @@ module "vpc" {
     SubnetType = "public"
   }
 
-  tags = local.tags
-}
+  }
 
 resource "aws_security_group" "endpoint_access" {
   name        = "${local.namespace}-endpoints"
@@ -40,8 +39,7 @@ resource "aws_security_group" "endpoint_access" {
     cidr_blocks = [var.cidr_block]
   }
 
-  tags = local.tags
-}
+  }
 
 resource "aws_security_group" "internal_http" {
   name        = "${local.namespace}-exhibitor-lb"
@@ -62,8 +60,7 @@ resource "aws_security_group" "internal_http" {
     cidr_blocks = [var.cidr_block]
   }
 
-  tags = local.tags
-}
+  }
 
 module "endpoints" {
   source    = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
@@ -77,36 +74,26 @@ module "endpoints" {
       route_table_ids   = [module.vpc.vpc_main_route_table_id]
       service           = "s3"
       service_type      = "Gateway"
-      tags              = local.tags
-    },
+          },
     ssm = {
       service             = "ssm"
       subnet_ids          = module.vpc.private_subnets
       private_dns_enabled = true
-      tags                = local.tags
-    },
+          },
     ssmmessages = {
       service             = "ssmmessages"
       subnet_ids          = module.vpc.private_subnets
       private_dns_enabled = true
-      tags                = local.tags
-    },
+          },
     ec2 = {
       service             = "ec2"
       subnet_ids          = module.vpc.private_subnets
       private_dns_enabled = true
-      tags                = local.tags
-    },
+          },
     sqs = {
       service             = "sqs"
       subnet_ids          = module.vpc.private_subnets
       private_dns_enabled = true
-      tags                = local.tags
-    }
-  }
-
-  tags = {
-    Owner       = "user"
-    Environment = "dev"
+          }
   }
 }
