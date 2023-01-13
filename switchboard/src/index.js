@@ -26,6 +26,15 @@ function pathPlusQuery(event) {
   return [path, query.join("&")].join("?");
 }
 
+function addAccessControlHeaders(event, response) {
+  if (!event.request.headers.origin) return response;
+
+  response.headers["access-control-allow-origin"] = { value: event.request.headers.origin.value };
+  response.headers["access-control-allow-methods"] = { value: "HEAD, GET, OPTIONS" };
+  response.headers["access-control-allow-credentials"] = { value: "true" };
+  return response;
+}
+
 function handler(event) {
   var originalHost    = event.request.headers.host.value;
   var targetHost      = mappings[originalHost];
@@ -37,7 +46,7 @@ function handler(event) {
     }
   }
 
-  return {
+  var response = {
     statusCode: responseStatus,
     statusDescription: statusCodeDescriptions[responseStatus],
     headers: {
@@ -46,4 +55,6 @@ function handler(event) {
       }
     }
   };
+
+  return addAccessControlHeaders(event, response);
 };

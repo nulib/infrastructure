@@ -7,7 +7,3 @@ variable "response_status" {
   type    = number
   default = 302
 }
-
-variable "ssl_certificate_arn" {
-  type    = string
-}

@@ -33,6 +33,32 @@ locals {
   }
 }
 
+resource "aws_acm_certificate" "switchboard_cert" {
+  domain_name                 = keys(local.zones)[0]
+  subject_alternative_names   = slice(keys(local.zones), 1, length(keys(local.zones)))
+  validation_method           = "DNS"
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "switchboard_cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.switchboard_cert.domain_validation_options : dvo.domain_name => {
+      type    = dvo.resource_record_type
+      name    = dvo.resource_record_name
+      value   = dvo.resource_record_value
+      zone    = data.aws_route53_zone.mapping_zones[dvo.domain_name].zone_id
+    }
+  }
+
+  zone_id = each.value.zone
+  type    = each.value.type
+  name    = each.value.name
+  records = [each.value.value]
+  ttl     = 300
+}
+
 resource "aws_cloudfront_function" "switchboard" {
   name    = "switchboard-mapper"
   code    = local.function_source
@@ -57,7 +83,7 @@ resource "aws_cloudfront_distribution" "switchboard" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = var.ssl_certificate_arn
+    acm_certificate_arn = aws_acm_certificate.switchboard_cert.arn
     ssl_support_method  = "sni-only"
   }
 
@@ -73,7 +99,7 @@ resource "aws_cloudfront_distribution" "switchboard" {
   }
 
   default_cache_behavior {
-    allowed_methods           = ["HEAD", "GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS"]
+    allowed_methods           = ["HEAD", "GET", "OPTIONS"]
     cached_methods            = ["HEAD", "GET"]
     cache_policy_id           = data.aws_cloudfront_cache_policy.no_caching.id
     target_origin_id          = "nothing" 
