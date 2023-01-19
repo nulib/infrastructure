@@ -29,7 +29,7 @@ locals {
   })
 
   zones = {
-    for host in keys(var.mappings): host => join(".", slice(split(".", host), 1, length(split(".", host))))
+    for host in keys(var.mappings): host => trimprefix(host, regex("^.+?\\.", host))
   }
 }
 
