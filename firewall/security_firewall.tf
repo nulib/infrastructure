@@ -15,9 +15,86 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     allow {}
   }
 
+  # Exempt the Meadow API from any rate limits defined later
+  rule {
+    name     = "stack-p-allow-meadow-api"
+    priority = 0
+
+    action {
+      allow {}
+    }
+
+    statement {
+      and_statement {
+        statement {
+          byte_match_statement {
+            positional_constraint = "CONTAINS"
+            search_string         = "meadow"
+            field_to_match {
+              single_header {
+                name = "host"
+              }
+            }
+
+            text_transformation {
+              priority = 0
+              type     = "LOWERCASE"
+            }
+          }
+        }
+
+        statement {
+          byte_match_statement {
+            positional_constraint = "STARTS_WITH"
+            search_string         = "/api/"
+
+            field_to_match {
+
+              uri_path {}
+            }
+
+            text_transformation {
+              priority = 0
+              type     = "NONE"
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "stack-p-allow-meadow-api"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Block requests from a single IP exceeding 2,000 requests per 5 minute period
+  rule {
+    name     = "stack-p-rate-limiter"
+    priority = 1
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        aggregate_key_type = "IP"
+        limit              = 2000
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "stack-p-rate-limiter"
+      sampled_requests_enabled   = true
+    }
+  }
+
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
-    priority = 1
+    priority = 2
 
     override_action {
       dynamic "none" {
@@ -36,10 +113,14 @@ resource "aws_wafv2_web_acl" "security_firewall" {
         name          = "AWSManagedRulesCommonRuleSet"
         vendor_name   = "AWS"
 
-        dynamic "excluded_rule" {
+        dynamic "rule_action_override" {
           for_each = toset(local.excluded_rules["AWSManagedRulesCommonRuleSet"])
           iterator = rule
           content {
+            action_to_use {
+              count {}
+            }
+            
             name = rule.key
           }
         }
@@ -55,7 +136,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleSet"
-    priority = 2
+    priority = 3
 
     override_action {
       dynamic "none" {
@@ -68,7 +149,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
         content {}
       }
     }
-    
+
     statement {
       managed_rule_group_statement {
         name          = "AWSManagedRulesKnownBadInputsRuleSet"
