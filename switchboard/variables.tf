@@ -1,5 +1,10 @@
+variable "certificate_arn" {
+  type    = string
+  default = ""
+}
+
 variable "mappings" {
-  type    = map(string)
+  type    = map(map(string))
   default = {}
 }
 

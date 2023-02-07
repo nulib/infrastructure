@@ -24,16 +24,34 @@ provider "aws" {
 
 locals {
   function_source = templatefile("${path.module}/src/index.js", {
-    mappings          = jsonencode(var.mappings)
+    mappings          = jsonencode(local.mappings)
     response_status   = jsonencode(var.response_status)
   })
 
-  zones = {
-    for host in keys(var.mappings): host => trimprefix(host, regex("^.+?\\.", host))
+  dns_names = {
+    for k, v in var.mappings: v.dns => trimprefix(v.dns, regex("^.+?\\.", v.dns))
   }
+
+  mappings = {
+    for k, v in var.mappings: k => v.target
+  }
+
+  zones = {
+    for k, v in var.mappings: k => trimprefix(k, regex("^.+?\\.", k))
+  }
+
+  dvo_records = var.certificate_arn == "" ? {
+    for dvo in aws_acm_certificate.switchboard_cert[0].domain_validation_options : dvo.domain_name => {
+      type    = dvo.resource_record_type
+      name    = dvo.resource_record_name
+      value   = dvo.resource_record_value
+      zone    = data.aws_route53_zone.mapping_zones[dvo.domain_name].zone_id
+    }
+  } : {}
 }
 
 resource "aws_acm_certificate" "switchboard_cert" {
+  count                       = var.certificate_arn == "" ? 1 : 0
   domain_name                 = keys(local.zones)[0]
   subject_alternative_names   = slice(keys(local.zones), 1, length(keys(local.zones)))
   validation_method           = "DNS"
@@ -43,14 +61,7 @@ resource "aws_acm_certificate" "switchboard_cert" {
 }
 
 resource "aws_route53_record" "switchboard_cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.switchboard_cert.domain_validation_options : dvo.domain_name => {
-      type    = dvo.resource_record_type
-      name    = dvo.resource_record_name
-      value   = dvo.resource_record_value
-      zone    = data.aws_route53_zone.mapping_zones[dvo.domain_name].zone_id
-    }
-  }
+  for_each = local.dvo_records
 
   zone_id = each.value.zone
   type    = each.value.type
@@ -83,7 +94,7 @@ resource "aws_cloudfront_distribution" "switchboard" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = aws_acm_certificate.switchboard_cert.arn
+    acm_certificate_arn = var.certificate_arn == "" ? aws_acm_certificate.switchboard_cert[0].arn : var.certificate_arn
     ssl_support_method  = "sni-only"
   }
 
@@ -113,12 +124,12 @@ resource "aws_cloudfront_distribution" "switchboard" {
 }
 
 data "aws_route53_zone" "mapping_zones" {
-  for_each    = local.zones
+  for_each    = local.dns_names
   name        = each.value
 }
 
 resource "aws_route53_record" "switchboard" {
-  for_each    = var.mappings
+  for_each    = local.dns_names
   zone_id     = data.aws_route53_zone.mapping_zones[each.key].zone_id
   name        = each.key
   type        = "A"
