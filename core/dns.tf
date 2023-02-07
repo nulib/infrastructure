@@ -32,3 +32,12 @@ resource "aws_route53_zone" "dc_zone" {
   count   = var.digital_collections_zone_name == "" ? 0 : 1
   name    = var.digital_collections_zone_name
 }
+
+resource "aws_route53_record" "dc_dns" {
+  count   = var.digital_collections_zone_is_owned ? 1 : 0
+  zone_id = aws_route53_zone.hosted_zone.id
+  name    = var.digital_collections_zone_name
+  type    = "NS"
+  ttl     = "900"
+  records = aws_route53_zone.dc_zone[0].name_servers
+}

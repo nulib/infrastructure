@@ -1,3 +1,8 @@
+variable "digital_collections_zone_is_owned" {
+  type    = bool
+  default = false
+}
+
 variable "digital_collections_zone_name" {
   type    = string
   default = ""
