@@ -37,6 +37,11 @@ output "vpc" {
     cidr_block                = var.cidr_block
     http_security_group_id    = aws_security_group.internal_http.id
 
+    dc_dns_zone =  length(aws_route53_zone.dc_zone) > 0 ? {
+      id   = aws_route53_zone.dc_zone[0].id
+      name = aws_route53_zone.dc_zone[0].name
+    } : {}
+
     private_dns_zone = {
       id   = aws_route53_zone.private_zone.id
       name = aws_route53_zone.private_zone.name 
