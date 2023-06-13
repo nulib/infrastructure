@@ -225,7 +225,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 }
 
 resource "aws_wafv2_web_acl_association" "security_firewall" {
-  for_each     = var.resources
+  for_each     = var.firewall_type == "SECURITY" ? var.resources : {}
   resource_arn = each.value
   web_acl_arn  = aws_wafv2_web_acl.security_firewall.arn
 }
