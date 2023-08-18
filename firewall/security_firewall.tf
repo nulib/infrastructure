@@ -22,10 +22,41 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     content_type = "TEXT_PLAIN"
   }
 
+  rule {
+    name     = "AmazonIPReputationList"
+    priority = 0
+
+    override_action {
+      dynamic "none" {
+        for_each = toset(local.count_only ? [] : [1])
+        content {}
+      }
+
+      dynamic "count" {
+        for_each = toset(local.count_only ? [1] : [])
+        content {}
+      }
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesAmazonIpReputationList"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-load-balancer-firewall-aws-reputation"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Reputation Lists
   # Exempt the Meadow API from any rate limits defined later
   rule {
     name     = "stack-p-allow-meadow-api"
-    priority = 0
+    priority = 1
 
     action {
       allow {}
@@ -78,7 +109,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   # Block aggressive requests originating in Ireland
   rule {
     name     = "stack-p-aggressive-ie"
-    priority = 1
+    priority = 2
 
     action {
       block {
@@ -112,7 +143,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   # Block requests from a single IP exceeding 750 requests per 5 minute period
   rule {
     name     = "stack-p-rate-limiter"
-    priority = 2
+    priority = 3
 
     action {
       block {
@@ -139,7 +170,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
-    priority = 3
+    priority = 4
 
     override_action {
       dynamic "none" {
@@ -181,7 +212,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleSet"
-    priority = 4
+    priority = 5
 
     override_action {
       dynamic "none" {
