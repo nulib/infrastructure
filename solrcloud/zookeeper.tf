@@ -1,7 +1,6 @@
 resource "aws_iam_role" "zookeeper_task_role" {
   name               = "zookeeper"
   assume_role_policy = module.core.outputs.ecs.assume_role_policy
-  tags               = local.tags
 }
 
 resource "aws_iam_role_policy_attachment" "zookeeper_exec_command" {
@@ -13,8 +12,6 @@ resource "aws_security_group" "zookeeper_service" {
   name        = "${local.namespace}-zookeeper-service"
   description = "Zookeeper Service Security Group"
   vpc_id      = module.core.outputs.vpc.id
-
-  tags = local.tags
 }
 
 resource "aws_security_group_rule" "zookeeper_service_egress" {
@@ -54,7 +51,6 @@ resource "aws_security_group" "zookeeper_client" {
   name        = "${local.namespace}-zookeeper-client"
   description = "Zookeeper Client Security Group"
   vpc_id      = module.core.outputs.vpc.id
-  tags        = local.tags
 }
 
 locals {
@@ -69,7 +65,7 @@ resource "aws_ecs_task_definition" "zookeeper" {
   container_definitions = jsonencode([
     {
       name                = "zookeeper"
-      image               = "${module.core.outputs.ecs.registry_url}/zookeeper:3.7"
+      image               = "${module.core.outputs.ecs.registry_url}/zookeeper:3.8"
       essential           = true
       cpu                 = 256
       environment = [
@@ -80,19 +76,25 @@ resource "aws_ecs_task_definition" "zookeeper" {
         { name = "ZOO_STANDALONE_ENABLED",     value = "false" },
         { name = "ZOO_CFG_EXTRA",              value = "electionPortBindRetry=0" }
       ]
+      mountPoints  = []
+      volumesFrom  = []
       portMappings = [{
+          protocol        = "tcp"
           hostPort        = 8080
           containerPort   = 8080
         },
         {
+          protocol        = "tcp"
           hostPort        = 2181
           containerPort   = 2181
         },
         {
+          protocol        = "tcp"
           hostPort        = 2888
           containerPort   = 2888
         },
         {
+          protocol        = "tcp"
           hostPort        = 3888
           containerPort   = 3888
         }
@@ -120,7 +122,6 @@ resource "aws_ecs_task_definition" "zookeeper" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  tags                     = local.tags
 }
 
 resource "aws_service_discovery_service" "zookeeper" {
@@ -136,8 +137,6 @@ resource "aws_service_discovery_service" "zookeeper" {
 
     routing_policy = "MULTIVALUE"
   }
-
-  tags = local.tags
 }
 
 resource "aws_ecs_service" "zookeeper" {
@@ -161,8 +160,6 @@ resource "aws_ecs_service" "zookeeper" {
   }
 
   service_registries {
-    registry_arn = aws_service_discovery_service.zookeeper[*].arn[count.index]
+    registry_arn = aws_service_discovery_service.zookeeper[count.index].arn
   }
-
-  tags = local.tags
 }

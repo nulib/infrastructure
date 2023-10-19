@@ -1,6 +1,6 @@
 resource "aws_efs_file_system" "solr_backup_volume" {
   encrypted      = false
-  tags           = merge(local.tags, { Name = "stack-solr-backup"})
+  tags           = { Name = "stack-solr-backup" }
 }
 
 resource "aws_efs_mount_target" "solr_backup_mount_target" {
@@ -16,8 +16,6 @@ resource "aws_security_group" "solr_backup_access" {
   name        = "${local.namespace}-solr-backup"
   description = "Solr Backup Volume Security Group"
   vpc_id      = module.core.outputs.vpc.id
-
-  tags = local.tags
 }
 
 resource "aws_security_group_rule" "solr_backup_egress" {
@@ -51,8 +49,6 @@ resource "aws_security_group" "solr_service" {
   name        = "${local.namespace}-solr-service"
   description = "Solr Service Security Group"
   vpc_id      = module.core.outputs.vpc.id
-
-  tags = local.tags
 }
 
 resource "aws_security_group_rule" "solr_service_egress" {
@@ -77,13 +73,11 @@ resource "aws_security_group" "solr_client" {
   name        = "${local.namespace}-solr-client"
   description = "Solr Client Security Group"
   vpc_id      = module.core.outputs.vpc.id
-  tags        = local.tags
 }
 
 resource "aws_iam_role" "solr_task_role" {
   name               = "solr"
   assume_role_policy = module.core.outputs.ecs.assume_role_policy
-  tags               = local.tags
 }
 
 resource "aws_iam_role_policy_attachment" "solr_exec_command" {
@@ -106,11 +100,12 @@ resource "aws_ecs_task_definition" "solr" {
         { name = "ZK_HOST",         value = join(",", local.zookeeper_servers) }
       ]
       portMappings = [
-        { hostPort = 8983, containerPort = 8983 }
+        { protocol = "tcp", hostPort = 8983, containerPort = 8983 }
       ]
       mountPoints = [
         { sourceVolume = "solr-backup", containerPath = "/data/backup" }
       ]
+      volumesFrom  = []
       readonlyRootFilesystem = false
       logConfiguration = {
         logDriver = "awslogs"
@@ -142,7 +137,6 @@ resource "aws_ecs_task_definition" "solr" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 1024
   memory                   = 2048
-  tags                     = local.tags
 }
 
 resource "aws_service_discovery_service" "solr" {
@@ -157,8 +151,6 @@ resource "aws_service_discovery_service" "solr" {
 
     routing_policy = "MULTIVALUE"
   }
-
-  tags = local.tags
 }
 
 resource "aws_ecs_service" "solr" {
@@ -186,6 +178,4 @@ resource "aws_ecs_service" "solr" {
   service_registries {
     registry_arn = aws_service_discovery_service.solr.arn
   }
-
-  tags = local.tags
 }

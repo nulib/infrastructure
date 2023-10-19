@@ -9,7 +9,11 @@ terraform {
   required_version = ">= 1.3.0"
 }
 
-provider "aws" { }
+provider "aws" {
+  default_tags {
+    tags = local.tags
+  }
+}
 
 # Set up `module.core.outputs. as an alias for the VPC remote state
 # Create convenience accessors for `environment` and `namespace`
@@ -36,11 +40,9 @@ data "aws_region" "current" { }
 
 resource "aws_ecs_cluster" "solrcloud" {
   name = "solrcloud"
-  tags = local.tags
 }
 
 resource "aws_cloudwatch_log_group" "solrcloud_logs" {
   name                = "/ecs/solrcloud"
   retention_in_days   = 3
-  tags                = local.tags
 }
