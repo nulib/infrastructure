@@ -26,6 +26,15 @@ module "backup_lambda" {
   attach_network_policy  = true
 }
 
+resource "aws_lambda_permission" "allow_cloudwatch" {
+  for_each      = toset(aws_cloudwatch_event_rule.back_up_solr[*].arn)
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = module.backup_lambda.lambda_function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = each.key
+}
+
 data "aws_iam_policy_document" "solr_backup_rule_assume_role" {
   statement {
     effect  = "Allow"
@@ -34,27 +43,6 @@ data "aws_iam_policy_document" "solr_backup_rule_assume_role" {
       type        = "Service"
       identifiers = ["events.amazonaws.com"]
     }
-  }
-}
-
-data "aws_iam_policy_document" "event_rule_solr_backup" {
-  statement {
-    effect    = "Allow"
-    actions   = ["lambda:InvokeFunction"]
-    resources = [
-      module.backup_lambda.lambda_function_arn,
-      "${module.backup_lambda.lambda_function_arn}:*"
-    ]
-  }
-}
-
-resource "aws_iam_role" "event_rule_solr_backup" {
-  name                  = "${local.namespace}-solr-backup-event"
-  assume_role_policy    = data.aws_iam_policy_document.solr_backup_rule_assume_role.json
-
-  inline_policy {
-    name    = "${local.namespace}-solr-backup-event-policy"
-    policy  = data.aws_iam_policy_document.event_rule_solr_backup.json
   }
 }
 
