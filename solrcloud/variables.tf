@@ -10,5 +10,20 @@ variable "solr_cluster_size" {
 
 variable "backup_schedule" {
   type    = string
-  default = ""
+  default = null
+}
+
+variable "honeybadger_api_key" {
+  type    = string
+  default = null
+}
+
+variable "honeybadger_env" {
+  type    = string
+  default = null
+}
+
+variable "honeybadger_checkin_id" {
+  type    = string
+  default = null
 }

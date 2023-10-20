@@ -24,6 +24,11 @@ module "backup_lambda" {
     module.core.outputs.vpc.http_security_group_id
   ]
   attach_network_policy  = true
+  environment_variables = {
+    HONEYBADGER_API_KEY       = var.honeybadger_api_key
+    HONEYBADGER_ENV           = var.honeybadger_env
+    HONEYBADGER_CHECKIN_ID    = var.honeybadger_checkin_id
+  }
 }
 
 resource "aws_lambda_permission" "allow_cloudwatch" {
@@ -47,7 +52,7 @@ data "aws_iam_policy_document" "solr_backup_rule_assume_role" {
 }
 
 resource "aws_cloudwatch_event_rule" "back_up_solr" {
-  count                 = length(var.backup_schedule) > 0 ? 1 : 0
+  count                 = var.backup_schedule == null ? 0 : 1
   name                  = "${local.namespace}-solr-backup"
   description           = "Back up solr collections"
   schedule_expression   = var.backup_schedule
@@ -55,7 +60,7 @@ resource "aws_cloudwatch_event_rule" "back_up_solr" {
 }
 
 resource "aws_cloudwatch_event_target" "back_up_solr" {
-  count       = length(var.backup_schedule) > 0 ? 1 : 0
+  count       = var.backup_schedule == null ? 0 : 1
   rule        = aws_cloudwatch_event_rule.back_up_solr[0].name
   target_id   = "SolrBackup"
   arn         = module.backup_lambda.lambda_function_arn

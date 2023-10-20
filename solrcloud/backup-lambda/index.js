@@ -1,10 +1,23 @@
 const { format } = require('date-and-time');
 const SolrCluster = require('./solr_cluster');
+const Honeybadger = require("@honeybadger-io/js");
+const {
+  HONEYBADGER_API_KEY,
+  HONEYBADGER_CHECKIN_ID,
+  HONEYBADGER_ENV
+} = process.env;
+
+Honeybadger.configure({
+  apiKey: HONEYBADGER_API_KEY,
+  environment: HONEYBADGER_ENV
+});
 
 const handler = async (event, _context) => {
   switch (event.operation) {
     case 'backup':
-      return await solrBackup(event);
+      const result = await solrBackup(event);
+      await Honeybadger.checkIn(HONEYBADGER_CHECKIN_ID);
+      return result;
     case 'restore':
       return await solrRestore(event);
     case 'ready':
@@ -63,4 +76,4 @@ const solrReady = async (event) => {
   }
 };
 
-module.exports = { handler };
+module.exports = { handler: Honeybadger.lambdaHandler(handler) };
