@@ -63,10 +63,18 @@ resource "aws_cloudwatch_log_group" "fcrepo_logs" {
 resource "aws_s3_bucket" "fedora_binary_bucket" {
   bucket = "${local.namespace}-fedora-binaries"
 
-  lifecycle_rule {
-    abort_incomplete_multipart_upload_days    = 2
-    enabled                                   = true
-    id                                        = "purge-deleted-objects"
+  tags   = local.tags
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "fedora_binary_bucket" {
+  bucket = aws_s3_bucket.fedora_binary_bucket.id
+  rule {
+    id     = "purge-deleted-objects"
+    status = "Enabled"
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 2
+    }
 
     expiration {
       days = 0
@@ -74,11 +82,9 @@ resource "aws_s3_bucket" "fedora_binary_bucket" {
     }
 
     noncurrent_version_expiration {
-      days = 7
+      noncurrent_days = 730
     }
   }
-
-  tags   = local.tags
 }
 
 resource "aws_iam_user" "fedora_binary_bucket_user" {

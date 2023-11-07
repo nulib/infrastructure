@@ -25,7 +25,7 @@ resource "random_string" "role_password" {
   length  = 16
   upper   = true
   lower   = true
-  number  = true
+  numeric = true
   special = false
 }
 
