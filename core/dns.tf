@@ -8,7 +8,7 @@ resource "aws_route53_zone" "public_zone" {
 
 resource "aws_route53_zone" "private_zone" {
   name = join(".", [var.stack_name, "vpc", var.hosted_zone_name])
-    vpc {
+  vpc {
     vpc_id     = module.vpc.vpc_id
     vpc_region = data.aws_region.current.name
   }
