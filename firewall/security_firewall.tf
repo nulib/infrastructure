@@ -1,5 +1,4 @@
 locals {
-  count_only = var.firewall_type != "SECURITY"
   excluded_rules = {
     AWSManagedRulesCommonRuleSet         = ["CrossSiteScripting_BODY", "GenericRFI_BODY", "SizeRestrictions_BODY"]
     AWSManagedRulesKnownBadInputsRuleSet = []
@@ -14,6 +13,7 @@ resource "aws_cloudwatch_log_group" "security_firewall_log" {
 }
 
 resource "aws_wafv2_web_acl" "security_firewall" {
+  count = local.security_firewall ? 1 : 0
   name  = "${local.namespace}-load-balancer-firewall"
   scope = "REGIONAL"
   tags  = local.tags
@@ -32,9 +32,14 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     name     = "${local.namespace}-allow-nul-ips"
     priority = 0
 
-    action {
-      allow {}
+    rule_label {
+      name = "nul:internal-ip:v4"
     }
+
+    action {
+      count {}
+    }
+
 
     statement {
       ip_set_reference_statement {
@@ -43,7 +48,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     }
 
     visibility_config {
-      cloudwatch_metrics_enabled = false
+      cloudwatch_metrics_enabled = true
       metric_name                = "${local.namespace}-allow-nul-ips"
       sampled_requests_enabled   = true
     }
@@ -53,8 +58,12 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     name     = "${local.namespace}-${local.namespace}-allow-nul-ips-v6"
     priority = 1
 
+    rule_label {
+      name = "nul:internal-ip:v6"
+    }
+
     action {
-      allow {}
+      count {}
     }
 
     statement {
@@ -64,7 +73,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     }
 
     visibility_config {
-      cloudwatch_metrics_enabled = false
+      cloudwatch_metrics_enabled = true
       metric_name                = "${local.namespace}-allow-nul-ips"
       sampled_requests_enabled   = true
     }
@@ -143,7 +152,6 @@ resource "aws_wafv2_web_acl" "security_firewall" {
             search_string         = "/api/"
 
             field_to_match {
-
               uri_path {}
             }
 
@@ -164,19 +172,11 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   }
 
   rule {
-    name     = "AmazonIPReputationList"
+    name     = "${local.namespace}-aws-managed-ip-reputation-list"
     priority = 4
 
     override_action {
-      dynamic "none" {
-        for_each = toset(local.count_only ? [] : [1])
-        content {}
-      }
-
-      dynamic "count" {
-        for_each = toset(local.count_only ? [1] : [])
-        content {}
-      }
+      none {}
     }
 
     statement {
@@ -194,19 +194,11 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   }
   
   rule {
-    name     = "AWSManagedRulesBotControlRuleSet"
+    name     = "${local.namespace}-aws-managed-bot-control"
     priority = 5
 
     override_action {
-      dynamic "none" {
-        for_each = toset(local.count_only ? [] : [1])
-        content {}
-      }
-
-      dynamic "count" {
-        for_each = toset(local.count_only ? [1] : [])
-        content {}
-      }
+      none {}
     }
 
     statement {
@@ -240,15 +232,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     priority = 6
 
     action {
-      dynamic "block" {
-        for_each = toset(local.count_only ? [] : [1])
-        content {}
-      }
-
-      dynamic "count" {
-        for_each = toset(local.count_only ? [1] : [])
-        content {}
-      }
+      block {}
     }
 
     statement {
@@ -264,10 +248,44 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     }
   }
   
-  # Block requests from a single IP exceeding 750 requests per 5 minute period
+  # Challenge browsers that exceed the rate limit
   rule {
-    name     = "${local.namespace}-rate-limiter"
+    name     = "${local.namespace}-browser-rate-limiter"
     priority = 7
+
+    action {
+      challenge {}
+    }
+
+    statement {
+      rate_based_statement {
+        aggregate_key_type = "IP"
+        limit              = var.global_rate_limit
+
+        scope_down_statement {
+          not_statement {
+            statement {
+              label_match_statement {
+                scope = "LABEL"
+                key   = "awswaf:managed:aws:bot-control:bot:category:http_library"
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-rate-limiter"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Rate limit (HTTP status 429) HTTP client libraries that exceed the rate limit
+  rule {
+    name     = "${local.namespace}-http-client-rate-limiter"
+    priority = 8
 
     action {
       block {
@@ -281,7 +299,14 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     statement {
       rate_based_statement {
         aggregate_key_type = "IP"
-        limit              = 300
+        limit              = var.global_rate_limit
+
+        scope_down_statement {
+          label_match_statement {
+            scope = "LABEL"
+            key   = "awswaf:managed:aws:bot-control:bot:category:http_library"
+          }
+        }
       }
     }
 
@@ -293,19 +318,11 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   }
 
   rule {
-    name     = "AWSManagedRulesCommonRuleSet"
-    priority = 8
+    name     = "${local.namespace}-aws-managed-managed-common"
+    priority = 9
 
     override_action {
-      dynamic "none" {
-        for_each = toset(local.count_only ? [] : [1])
-        content {}
-      }
-
-      dynamic "count" {
-        for_each = toset(local.count_only ? [1] : [])
-        content {}
-      }
+      none {}
     }
 
     statement {
@@ -335,19 +352,11 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   }
 
   rule {
-    name     = "AWSManagedRulesKnownBadInputsRuleSet"
-    priority = 9
+    name     = "${local.namespace}-aws-managed-known-bad-inputs"
+    priority = 10
 
     override_action {
-      dynamic "none" {
-        for_each = toset(local.count_only ? [] : [1])
-        content {}
-      }
-
-      dynamic "count" {
-        for_each = toset(local.count_only ? [1] : [])
-        content {}
-      }
+      none {}
     }
 
     statement {
@@ -380,8 +389,9 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "security_firewall" {
+  count                   = local.security_firewall ? 1 : 0
   log_destination_configs = [aws_cloudwatch_log_group.security_firewall_log.arn]
-  resource_arn            = aws_wafv2_web_acl.security_firewall.arn
+  resource_arn            = aws_wafv2_web_acl.security_firewall[0].arn
 
   logging_filter {
     default_behavior = "KEEP"
@@ -400,7 +410,7 @@ resource "aws_wafv2_web_acl_logging_configuration" "security_firewall" {
 }
 
 resource "aws_wafv2_web_acl_association" "security_firewall" {
-  for_each     = var.firewall_type == "SECURITY" ? var.resources : {}
+  for_each     = local.security_firewall ? var.resources : {}
   resource_arn = each.value
-  web_acl_arn  = aws_wafv2_web_acl.security_firewall.arn
+  web_acl_arn  = aws_wafv2_web_acl.security_firewall[0].arn
 }

@@ -1,5 +1,5 @@
 resource "aws_wafv2_web_acl" "ip_firewall" {
-  count       = var.firewall_type == "IP" ? 1 : 0
+  count       = local.ip_firewall ? 1 : 0
   name        = "staging-ip-acl"
   description = "Protect staging resources using IP restrictions"
   scope       = "REGIONAL"
@@ -50,26 +50,6 @@ resource "aws_wafv2_web_acl" "ip_firewall" {
       sampled_requests_enabled   = true
     }
   }
-  rule {
-    name     = "allow-rdc-home-ips"
-    priority = 3
-
-    action {
-      allow {}
-    }
-
-    statement {
-      ip_set_reference_statement {
-        arn = aws_wafv2_ip_set.rdc_home_ip_set.arn
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = false
-      metric_name                = "Allow_RDC_Home_IPs"
-      sampled_requests_enabled   = true
-    }
-  }
 
   visibility_config {
     cloudwatch_metrics_enabled = false
@@ -79,7 +59,7 @@ resource "aws_wafv2_web_acl" "ip_firewall" {
 }
 
 resource "aws_wafv2_web_acl_association" "ip_firewall" {
-  for_each        = var.firewall_type == "IP" ? var.resources : {}
+  for_each        = local.ip_firewall ? var.resources : {}
   resource_arn    = each.value
   web_acl_arn     = aws_wafv2_web_acl.ip_firewall[0].arn
 }

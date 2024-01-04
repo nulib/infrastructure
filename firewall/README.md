@@ -4,9 +4,10 @@ This terraform project includes the resources required to set up the WAF ACL(s) 
 
 ## Secrets
 
+* `allowed_user_agents` – The list of user agents to allow through without bot control
 * `firewall_type` – The type of firewall to create (`IP` for NUL IPs, `SECURITY` for managed security rulesets)
-* `nul_ips` – A list of IP ranges representing the NUL staff offices and VPN
-* `rdc_home_ips` – A list of IP addresses representing home offices of NUL RDC staffers for convenience
+* `global_rate_limit` – Rate limit (# requests per 5 minutes) for clients not caught by any other rule
+* `high_traffic_ips` – Known high-traffic IPs to block
 * `resources` – A map of indicating the resources to be protected
   * Example: `{ name = "my-app", arn = "arn:aws:elasticloadbalancing:..." }`
 

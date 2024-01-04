@@ -13,19 +13,9 @@ variable "high_traffic_ips" {
   default = []
 }
 
-variable "nul_ips" {
-  type    = list
-  default = []
-}
-
-variable "nul_ips_v6" {
-  type    = list
-  default = []
-}
-
-variable "rdc_home_ips" {
-  type    = list
-  default = []
+variable "global_rate_limit" {
+  type    = number
+  default = 1000
 }
 
 variable "resources" {

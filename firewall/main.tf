@@ -17,7 +17,10 @@ module "core" {
 }
 
 locals {
-  namespace = module.core.outputs.stack.namespace
+  namespace           = module.core.outputs.stack.namespace
+  ip_firewall         = var.firewall_type == "IP"
+  security_firewall   = var.firewall_type == "SECURITY"
+
   tags = merge(
     module.core.outputs.stack.tags,
     {
