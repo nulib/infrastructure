@@ -3,7 +3,7 @@ locals {
   excluded_rules = {
     AWSManagedRulesCommonRuleSet         = ["CrossSiteScripting_BODY", "GenericRFI_BODY", "SizeRestrictions_BODY"]
     AWSManagedRulesKnownBadInputsRuleSet = []
-    AWSManagedRulesBotControlRuleSet     = []
+    AWSManagedRulesBotControlRuleSet     = ["CategoryHttpLibrary", "SignalNonBrowserUserAgent"]
   }
 }
 
@@ -29,8 +29,50 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   }
 
   rule {
-    name     = "${local.namespace}-allowed-user-agents"
+    name     = "${local.namespace}-allow-nul-ips"
     priority = 0
+
+    action {
+      allow {}
+    }
+
+    statement {
+      ip_set_reference_statement {
+        arn = aws_wafv2_ip_set.nul_ip_set.arn
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = false
+      metric_name                = "${local.namespace}-allow-nul-ips"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "${local.namespace}-${local.namespace}-allow-nul-ips-v6"
+    priority = 1
+
+    action {
+      allow {}
+    }
+
+    statement {
+      ip_set_reference_statement {
+        arn = aws_wafv2_ip_set.nul_ipv6_set.arn
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = false
+      metric_name                = "${local.namespace}-allow-nul-ips"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "${local.namespace}-allowed-user-agents"
+    priority = 2
 
     action {
       allow {}
@@ -71,7 +113,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   # Exempt the Meadow API from any rate limits defined later
   rule {
     name     = "${local.namespace}-allow-meadow-api"
-    priority = 1
+    priority = 3
 
     action {
       allow {}
@@ -123,7 +165,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "AmazonIPReputationList"
-    priority = 2
+    priority = 4
 
     override_action {
       dynamic "none" {
@@ -153,7 +195,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   
   rule {
     name     = "AWSManagedRulesBotControlRuleSet"
-    priority = 3
+    priority = 5
 
     override_action {
       dynamic "none" {
@@ -193,44 +235,39 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     }
   }
 
-  # Block aggressive requests originating in Ireland
   rule {
-    name     = "${local.namespace}-aggressive-ie"
-    priority = 4
+    name     = "${local.namespace}-high-traffic-ips"
+    priority = 6
 
     action {
-      block {
-        custom_response {
-          custom_response_body_key = "rate_limit_response"
-          response_code            = 429
-        }
+      dynamic "block" {
+        for_each = toset(local.count_only ? [] : [1])
+        content {}
+      }
+
+      dynamic "count" {
+        for_each = toset(local.count_only ? [1] : [])
+        content {}
       }
     }
 
     statement {
-      rate_based_statement {
-        limit              = 150
-        aggregate_key_type = "IP"
-
-        scope_down_statement {
-          geo_match_statement {
-            country_codes = ["IE"]
-          }
-        }
+      ip_set_reference_statement {
+        arn = aws_wafv2_ip_set.high_traffic_ip_set.arn
       }
     }
 
     visibility_config {
       cloudwatch_metrics_enabled = true
-      metric_name                = "${local.namespace}-aggressive-ie"
+      metric_name                = "${local.namespace}-load-balancer-high-traffic-ips"
       sampled_requests_enabled   = true
     }
   }
-
+  
   # Block requests from a single IP exceeding 750 requests per 5 minute period
   rule {
     name     = "${local.namespace}-rate-limiter"
-    priority = 5
+    priority = 7
 
     action {
       block {
@@ -257,7 +294,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
-    priority = 6
+    priority = 8
 
     override_action {
       dynamic "none" {
@@ -299,7 +336,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleSet"
-    priority = 7
+    priority = 9
 
     override_action {
       dynamic "none" {
@@ -335,50 +372,11 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     }
   }
 
-  rule {
-    name     = "${local.namespace}-high-traffic-ips"
-    priority = 8
-
-    action {
-      dynamic "block" {
-        for_each = toset(local.count_only ? [] : [1])
-        content {}
-      }
-
-      dynamic "count" {
-        for_each = toset(local.count_only ? [1] : [])
-        content {}
-      }
-    }
-
-    statement {
-      ip_set_reference_statement {
-        arn = aws_wafv2_ip_set.high_traffic_ip_set[0].arn
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${local.namespace}-load-balancer-high-traffic-ips"
-      sampled_requests_enabled   = true
-    }
-  }
-  
   visibility_config {
     cloudwatch_metrics_enabled = true
     metric_name                = "${local.namespace}-load-balancer-firewall"
     sampled_requests_enabled   = true
   }
-}
-
-resource "aws_wafv2_ip_set" "high_traffic_ip_set" {
-  count              = var.firewall_type == "SECURITY" ? 1 : 0
-  name               = "high-traffic-ips"
-  description        = "High Traffic IPs"
-  scope              = "REGIONAL"
-  ip_address_version = "IPV4"
-  addresses          = var.high_traffic_ips
-  tags               = local.tags
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "security_firewall" {

@@ -1,33 +1,3 @@
-resource "aws_wafv2_ip_set" "nul_ip_set" {
-  count              = var.firewall_type == "IP" ? 1 : 0
-  name               = "nul-ips"
-  description        = "NU Library IPv4 Addresses"
-  scope              = "REGIONAL"
-  ip_address_version = "IPV4"
-  addresses          = var.nul_ips
-  tags               = local.tags
-}
-
-resource "aws_wafv2_ip_set" "nul_ipv6_set" {
-  count              = var.firewall_type == "IP" ? 1 : 0
-  name               = "nul-ips-v6"
-  description        = "NU Library IPv6 Addresses"
-  scope              = "REGIONAL"
-  ip_address_version = "IPV6"
-  addresses          = var.nul_ips_v6
-  tags               = local.tags
-}
-
-resource "aws_wafv2_ip_set" "rdc_home_ip_set" {
-  count              = var.firewall_type == "IP" ? 1 : 0
-  name               = "rdc-home-ips"
-  description        = "Home IP Addresses of RDC Users"
-  scope              = "REGIONAL"
-  ip_address_version = "IPV4"
-  addresses          = var.rdc_home_ips
-  tags               = local.tags
-}
-
 resource "aws_wafv2_web_acl" "ip_firewall" {
   count       = var.firewall_type == "IP" ? 1 : 0
   name        = "staging-ip-acl"
@@ -49,7 +19,7 @@ resource "aws_wafv2_web_acl" "ip_firewall" {
 
     statement {
       ip_set_reference_statement {
-        arn = aws_wafv2_ip_set.nul_ip_set[0].arn
+        arn = aws_wafv2_ip_set.nul_ip_set.arn
       }
     }
 
@@ -70,7 +40,7 @@ resource "aws_wafv2_web_acl" "ip_firewall" {
 
     statement {
       ip_set_reference_statement {
-        arn = aws_wafv2_ip_set.nul_ipv6_set[0].arn
+        arn = aws_wafv2_ip_set.nul_ipv6_set.arn
       }
     }
 
@@ -90,7 +60,7 @@ resource "aws_wafv2_web_acl" "ip_firewall" {
 
     statement {
       ip_set_reference_statement {
-        arn = aws_wafv2_ip_set.rdc_home_ip_set[0].arn
+        arn = aws_wafv2_ip_set.rdc_home_ip_set.arn
       }
     }
 
