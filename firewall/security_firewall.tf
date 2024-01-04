@@ -392,21 +392,6 @@ resource "aws_wafv2_web_acl_logging_configuration" "security_firewall" {
   count                   = local.security_firewall ? 1 : 0
   log_destination_configs = [aws_cloudwatch_log_group.security_firewall_log.arn]
   resource_arn            = aws_wafv2_web_acl.security_firewall[0].arn
-
-  logging_filter {
-    default_behavior = "KEEP"
-
-    filter {
-      requirement   = "MEETS_ANY"
-      behavior      = "DROP"
-
-      condition {
-        action_condition {
-          action = "ALLOW"
-        }
-      }
-    }
-  }
 }
 
 resource "aws_wafv2_web_acl_association" "security_firewall" {
