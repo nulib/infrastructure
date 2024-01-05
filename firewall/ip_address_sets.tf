@@ -3,7 +3,7 @@ resource "aws_wafv2_ip_set" "nul_ip_set" {
   description        = "NU Library IPv4 Addresses"
   scope              = "REGIONAL"
   ip_address_version = "IPV4"
-  addresses          = local.nul_ips
+  addresses          = var.nul_ips.v4
   tags               = local.tags
 }
 
@@ -12,7 +12,7 @@ resource "aws_wafv2_ip_set" "nul_ipv6_set" {
   description        = "NU Library IPv6 Addresses"
   scope              = "REGIONAL"
   ip_address_version = "IPV6"
-  addresses          = local.nul_ips_v6
+  addresses          = var.nul_ips.v6
   tags               = local.tags
 }
 
