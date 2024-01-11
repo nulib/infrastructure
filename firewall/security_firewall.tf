@@ -318,7 +318,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   }
 
   rule {
-    name     = "${local.namespace}-aws-managed-managed-common"
+    name     = "${local.namespace}-aws-managed-common"
     priority = 9
 
     override_action {
