@@ -17,3 +17,16 @@ variable "services" {
   type    = map(list(string))
   default = {}
 }
+
+variable "slack_webhook" {
+  type    = map(string)
+  default = {
+    channel   = ""
+    url       = ""
+    username  = ""
+  }
+}
+
+variable "status_zone_name" {
+  type    = string
+}

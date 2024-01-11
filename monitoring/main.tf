@@ -17,6 +17,8 @@ module "core" {
 }
 
 locals {
+  alarm_actions = concat(var.alarm_actions, var.slack_webhook.url == "" ? [] : [module.notify_slack.slack_topic_arn])
+
   tags = merge(
     module.core.outputs.stack.tags,
     {
@@ -42,7 +44,7 @@ resource "aws_cloudwatch_metric_alarm" "load_balancer_5xx" {
   for_each              = toset(var.load_balancers)
 
   actions_enabled       = var.actions_enabled
-  alarm_actions         = var.alarm_actions
+  alarm_actions         = local.alarm_actions
   alarm_name            = "${each.key}-LoadBalancer5XX"
   comparison_operator   = "GreaterThanOrEqualToThreshold"
   evaluation_periods    = 3
@@ -64,7 +66,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
   for_each              = local.services
 
   actions_enabled       = var.actions_enabled
-  alarm_actions         = var.alarm_actions
+  alarm_actions         = local.alarm_actions
   alarm_name            = "${each.value.service}-CPUUtilization"
   comparison_operator   = "GreaterThanOrEqualToThreshold"
   evaluation_periods    = 3
@@ -86,7 +88,7 @@ resource "aws_cloudwatch_metric_alarm" "memory_utilization" {
   for_each              = local.services
 
   actions_enabled       = var.actions_enabled
-  alarm_actions         = var.alarm_actions
+  alarm_actions         = local.alarm_actions
   alarm_name            = "${each.value.service}-MemoryUtilization"
   comparison_operator   = "GreaterThanOrEqualToThreshold"
   evaluation_periods    = 3
@@ -102,4 +104,16 @@ resource "aws_cloudwatch_metric_alarm" "memory_utilization" {
   }
 
   tags = local.tags
+}
+
+data "aws_route53_zone" "status_zone" {
+  name = var.status_zone_name
+}
+
+resource "aws_route53_record" "honeybadger_status_page" {
+  zone_id   = data.aws_route53_zone.status_zone.id
+  name      = "status.${data.aws_route53_zone.status_zone.name}"
+  type      = "CNAME"
+  records   = ["status.hbuptime.com"]
+  ttl       = 300
 }
