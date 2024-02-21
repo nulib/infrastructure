@@ -1,0 +1,106 @@
+locals {
+  model_container_spec = {
+    framework         = "huggingface"
+    base_framework    = "pytorch"
+    image_scope       = "inference"
+    framework_version = "2.1.0"
+    image_version     = "4.37.0"
+    python_version    = "py310"
+    processor         = "cpu"
+    image_os          = "ubuntu22.04"
+  }
+
+  model_repository = join("-", [local.model_container_spec.framework, local.model_container_spec.base_framework, local.model_container_spec.image_scope])
+  model_image_tag  = "${local.model_container_spec.framework_version}-transformers${local.model_container_spec.image_version}-${local.model_container_spec.processor}-${local.model_container_spec.python_version}-${local.model_container_spec.image_os}"
+}
+
+data "aws_sagemaker_prebuilt_ecr_image" "inference_container" {
+  repository_name = local.model_repository
+  image_tag       = local.model_image_tag
+}
+
+data "aws_iam_policy_document" "embedding_model_execution_assume_role" {
+  statement {
+    effect    = "Allow"
+    actions   = ["sts:AssumeRole"]
+
+    principals {
+      type          = "Service"
+      identifiers   = ["sagemaker.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "embedding_model_execution_role" {
+  statement {
+    effect    = "Allow"
+    actions   = [
+      "cloudwatch:PutMetricData",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:CreateLogGroup",
+      "logs:DescribeLogStreams",
+      "ecr:GetAuthorizationToken"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = ["s3:GetObject"]
+    resources = ["arn:aws:s3:::${var.sagemaker_model_bucket}/${var.sagemaker_model_key}"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchGetImage"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "embedding_model_execution_role" {
+  name    = "${local.namespace}-sagemaker-model-execution-role"
+  policy  = data.aws_iam_policy_document.embedding_model_execution_role.json
+}
+
+resource "aws_iam_role" "embedding_model_execution_role" {
+  name                  = "${local.namespace}-sagemaker-model-execution-role"
+  assume_role_policy    = data.aws_iam_policy_document.embedding_model_execution_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "embedding_model_execution_role" {
+  role          = aws_iam_role.embedding_model_execution_role.id
+  policy_arn    = aws_iam_policy.embedding_model_execution_role.arn
+}
+
+resource "aws_sagemaker_model" "embedding_model" {
+  name                  = "${local.namespace}-embedding-model"
+  execution_role_arn    = aws_iam_role.embedding_model_execution_role.arn
+  
+  primary_container {
+    image = data.aws_sagemaker_prebuilt_ecr_image.inference_container.registry_path
+  }
+}
+
+resource "aws_sagemaker_endpoint_configuration" "serverless_inference" {
+  name = "${local.namespace}-embedding-model"
+  production_variants {
+    model_name    = aws_sagemaker_model.embedding_model.name
+    variant_name  = "AllTraffic"
+
+    serverless_config {
+      memory_size_in_mb         = var.sagemaker_inference_memory
+      max_concurrency           = var.sagemaker_inference_max_concurrency
+      provisioned_concurrency   = var.sagemaker_inference_provisioned_concurrency > 0 ? var.sagemaker_inference_provisioned_concurrency : null
+    }
+  }
+}
+
+resource "aws_sagemaker_endpoint" "serverless_inference" {
+  name                    = "${local.namespace}-embedding"
+  endpoint_config_name    = aws_sagemaker_endpoint_configuration.serverless_inference.name
+}

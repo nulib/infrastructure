@@ -17,3 +17,26 @@ variable "opensearch_volume_size" {
   type    = number
   default = 10
 }
+
+variable "sagemaker_model_bucket" {
+  type    = string
+}
+
+variable "sagemaker_model_key" {
+  type    = string
+}
+
+variable "sagemaker_inference_memory" {
+  type    = number
+  default = 4096
+}
+
+variable "sagemaker_inference_provisioned_concurrency" {
+  type    = number
+  default = 0
+}
+
+variable "sagemaker_inference_max_concurrency" {
+  type    = number
+  default = 20
+}
