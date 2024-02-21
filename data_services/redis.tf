@@ -43,6 +43,10 @@ resource "aws_elasticache_cluster" "redis" {
   security_group_ids   = [aws_security_group.redis_service.id]
   subnet_group_name    = aws_elasticache_subnet_group.redis.name
   tags                 = local.tags
+
+  lifecycle {
+    ignore_changes = [ engine_version ]
+  }
 }
 
 resource "aws_route53_record" "redis" {

@@ -8,6 +8,20 @@ output "elasticsearch" {
   }
 }
 
+output "search_snapshot_configuration" {
+  value = {
+    create_url    = "https://${aws_opensearch_domain.elasticsearch.endpoint}/_snapshot/"
+    create_doc    = jsonencode({
+      type     = "s3"
+      settings = {
+        bucket    = aws_s3_bucket.elasticsearch_snapshot_bucket.id
+        region    = data.aws_region.current.name
+        role_arn  = aws_iam_role.elasticsearch_snapshot_bucket_access.arn
+      }
+    })
+  }
+}
+
 output "postgres" {
   value = {
     address               = aws_db_instance.db.address

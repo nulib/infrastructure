@@ -1,5 +1,14 @@
 locals {
-  all_zones = flatten([aws_route53_zone.hosted_zone.name, aws_route53_zone.public_zone.name, var.additional_environment_zones])
+  all_zones = compact(
+    flatten(
+      [
+        aws_route53_zone.hosted_zone.name, 
+        aws_route53_zone.public_zone.name, 
+        var.digital_collections_zone_name,
+        var.additional_environment_zones
+      ]
+    )
+  )
 
   certificate_sans = flatten([
     local.all_zones,

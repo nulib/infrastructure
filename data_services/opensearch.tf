@@ -22,9 +22,8 @@ resource "aws_security_group_rule" "elasticsearch_ingress" {
 }
 
 resource "aws_opensearch_domain" "elasticsearch" {
-  domain_name       = "${local.namespace}-common-index"
-  engine_version    = "OpenSearch_1.2"
-  access_policies   = data.aws_iam_policy_document.elasticsearch_http_access.json
+  domain_name       = "${local.namespace}-index"
+  engine_version    = "OpenSearch_2.11"
   tags              = local.tags
 
   advanced_options = {
@@ -32,11 +31,11 @@ resource "aws_opensearch_domain" "elasticsearch" {
   }
 
   cluster_config {
-    instance_type             = "t3.medium.search"
+    instance_type             = "m6g.large.search"
     instance_count            = var.opensearch_cluster_nodes
     zone_awareness_enabled    = true
     zone_awareness_config {
-      availability_zone_count = 3
+      availability_zone_count = min(var.opensearch_cluster_nodes, 3)
     }
   }
 
@@ -47,8 +46,13 @@ resource "aws_opensearch_domain" "elasticsearch" {
 
 
   lifecycle {
-    ignore_changes = [ebs_options]
+    ignore_changes = []
   }
+}
+
+resource "aws_opensearch_domain_policy" "elasticsearch" {
+  domain_name     = aws_opensearch_domain.elasticsearch.domain_name
+  access_policies = data.aws_iam_policy_document.elasticsearch_http_access.json
 }
 
 data "aws_caller_identity" "current_user" {}
@@ -62,7 +66,7 @@ data "aws_iam_policy_document" "elasticsearch_http_access" {
       type        = "AWS"
       identifiers = ["arn:aws:iam::${data.aws_caller_identity.current_user.account_id}:root"]
     }
-    resources = ["arn:aws:es:${data.aws_region.current.name}:${data.aws_caller_identity.current_user.account_id}:domain/${local.namespace}-common-index/*"]
+    resources = ["arn:aws:es:${data.aws_region.current.name}:${data.aws_caller_identity.current_user.account_id}:domain/${local.namespace}-index/*"]
   }
 }
 

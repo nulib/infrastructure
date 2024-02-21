@@ -2,7 +2,7 @@ resource "random_string" "db_master_password" {
   length  = 16
   upper   = true
   lower   = true
-  number  = true
+  numeric = true
   special = false
 }
 
@@ -73,7 +73,7 @@ resource "aws_db_instance" "db" {
   engine                    = "postgres"
   engine_version            = var.postgres_version
   instance_class            = var.instance_class
-  name                      = "${module.core.outputs.stack.name}db"
+  db_name                   = "${module.core.outputs.stack.name}db"
   username                  = "dbadmin"
   parameter_group_name      = aws_db_parameter_group.db_parameter_group.name
   password                  = random_string.db_master_password.result
@@ -84,8 +84,4 @@ resource "aws_db_instance" "db" {
   db_subnet_group_name      = aws_db_subnet_group.db_subnet_group.name
   vpc_security_group_ids    = [aws_security_group.db.id]
   tags                      = local.tags
-
-  lifecycle {
-    ignore_changes = [latest_restorable_time]
-  }
 }
