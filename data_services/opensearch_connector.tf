@@ -103,7 +103,7 @@ module "deploy_model_lambda" {
 
 resource "aws_lambda_invocation" "deploy_model" {
   function_name   = module.deploy_model_lambda.lambda_function_name
-  lifecycle_scope = "CREATE_ONLY"
+  lifecycle_scope = "CRUD"
 
   input = jsonencode({
     namespace         = local.namespace
