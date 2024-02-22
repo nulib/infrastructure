@@ -1,0 +1,23 @@
+{
+  "name": "deploy-model-lambda",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nulib/infrastructure.git"
+  },
+  "author": "MBK",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/nulib/infrastructure/issues"
+  },
+  "homepage": "https://github.com/nulib/infrastructure#readme",
+  "dependencies": {
+    "@aws-crypto/sha256-browser": "^5.2.0",
+    "@aws-sdk/credential-provider-node": "^3.515.0",
+    "@smithy/node-http-handler": "^2.3.1",
+    "@smithy/protocol-http": "^3.1.1",
+    "@smithy/signature-v4": "^2.1.1"
+  }
+}

@@ -1,0 +1,8 @@
+def name = 'sentence_embedding';
+def dataType = 'FLOAT32';
+if (params.embedding == null || params.embedding.length == 0) {
+      return params.message;
+}
+def shape = [params.embedding.length];
+def json = '{"name":"' + name + '","data_type":"' + dataType + '","shape":' + shape + ',"data":' + params.embedding + '}';
+return json;

@@ -4,3 +4,4 @@
 *.tfvars
 *.plan
 node_modules
+data_services/model/.working

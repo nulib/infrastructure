@@ -1,3 +1,8 @@
+locals {
+  deploy_model_result   = jsondecode(aws_lambda_invocation.deploy_model.result)
+  deploy_model_body     = jsondecode(local.deploy_model_result.body)
+}
+
 output "elasticsearch" {
   value = {
     arn             = aws_opensearch_domain.elasticsearch.arn
@@ -5,6 +10,14 @@ output "elasticsearch" {
     endpoint        = "https://${aws_opensearch_domain.elasticsearch.endpoint}/"
     full_policy_arn = aws_iam_policy.elasticsearch_full_access.arn
     read_policy_arn = aws_iam_policy.elasticsearch_read_access.arn
+  }
+}
+
+output "inference" {
+  value = {
+    endpoint_name         = aws_sagemaker_endpoint.serverless_inference.name
+    invocation_url        = local.embedding_invocation_url
+    opensearch_model_id   = lookup(local.deploy_model_body, "model_id", "DEPLOY ERROR")
   }
 }
 
