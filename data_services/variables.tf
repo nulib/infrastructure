@@ -18,11 +18,7 @@ variable "opensearch_volume_size" {
   default = 10
 }
 
-variable "sagemaker_model_bucket" {
-  type    = string
-}
-
-variable "sagemaker_model_key" {
+variable "model_repository" {
   type    = string
 }
 

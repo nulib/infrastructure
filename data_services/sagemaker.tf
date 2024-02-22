@@ -10,8 +10,40 @@ locals {
     image_os          = "ubuntu22.04"
   }
 
+  model_id         = element(split("/", var.model_repository), length(split("/", var.model_repository))-1)
   model_repository = join("-", [local.model_container_spec.framework, local.model_container_spec.base_framework, local.model_container_spec.image_scope])
   model_image_tag  = "${local.model_container_spec.framework_version}-transformers${local.model_container_spec.image_version}-${local.model_container_spec.processor}-${local.model_container_spec.python_version}-${local.model_container_spec.image_os}"
+
+  embedding_invocation_url = "https://runtime.sagemaker.${data.aws_region.current.name}.amazonaws.com/endpoints/${aws_sagemaker_endpoint.serverless_inference.name}/invocations"
+}
+
+resource "aws_s3_bucket" "sagemaker_model_bucket" {
+  bucket = "${local.namespace}-model-artifacts"
+}
+
+resource "terraform_data" "inference_model_artifact" {
+  triggers_replace = [
+    var.model_repository
+  ]
+
+  input = "${path.module}/model/.working/${local.model_id}.tar.gz"
+
+  provisioner "local-exec" {
+    command     = "./build_model.sh"
+    working_dir = "${path.module}/model"
+
+    environment = {
+      model_id   = local.model_id
+      repository = var.model_repository
+    }
+  }
+}
+
+resource "aws_s3_object" "inference_model_artifact" {
+  bucket            = aws_s3_bucket.sagemaker_model_bucket.bucket
+  key               = "custom_inference/${local.model_id}/${local.model_id}.tar.gz"
+  source            = terraform_data.inference_model_artifact.output
+  content_type      = "application/gzip"
 }
 
 data "aws_sagemaker_prebuilt_ecr_image" "inference_container" {
@@ -48,7 +80,7 @@ data "aws_iam_policy_document" "embedding_model_execution_role" {
   statement {
     effect = "Allow"
     actions = ["s3:GetObject"]
-    resources = ["arn:aws:s3:::${var.sagemaker_model_bucket}/${var.sagemaker_model_key}"]
+    resources = ["arn:aws:s3:::${aws_s3_bucket.sagemaker_model_bucket.bucket}/${aws_s3_object.inference_model_artifact.key}"]
   }
 
   statement {
@@ -82,7 +114,9 @@ resource "aws_sagemaker_model" "embedding_model" {
   execution_role_arn    = aws_iam_role.embedding_model_execution_role.arn
   
   primary_container {
-    image = data.aws_sagemaker_prebuilt_ecr_image.inference_container.registry_path
+    image             = data.aws_sagemaker_prebuilt_ecr_image.inference_container.registry_path
+    mode              = "SingleModel"
+    model_data_url    = "s3://${aws_s3_object.inference_model_artifact.bucket}/${aws_s3_object.inference_model_artifact.key}"
   }
 }
 
