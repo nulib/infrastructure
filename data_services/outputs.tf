@@ -1,6 +1,6 @@
 locals {
-  deploy_model_result   = jsondecode(aws_lambda_invocation.deploy_model.result)
-  deploy_model_body     = jsondecode(local.deploy_model_result.body)
+  deploy_model_result   = { for key in keys(var.sagemaker_configurations) : key => jsondecode(aws_lambda_invocation.deploy_model[key].result) }
+  deploy_model_body     = { for key in keys(var.sagemaker_configurations) : key => jsondecode(local.deploy_model_result[key].body) }
 }
 
 output "elasticsearch" {
@@ -14,11 +14,11 @@ output "elasticsearch" {
 }
 
 output "inference" {
-  value = {
-    endpoint_name         = aws_sagemaker_endpoint.serverless_inference.name
-    invocation_url        = local.embedding_invocation_url
-    opensearch_model_id   = lookup(local.deploy_model_body, "model_id", "DEPLOY ERROR")
-  }
+  value = { for key, value in local.deploy_model_body : key => {    
+    endpoint_name         = aws_sagemaker_endpoint.serverless_inference[key].name
+    invocation_url        = local.embedding_invocation_url[key]
+    opensearch_model_id   = lookup(value, "model_id", "DEPLOY ERROR")
+  }}
 }
 
 output "search_snapshot_configuration" {

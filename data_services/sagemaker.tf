@@ -14,7 +14,8 @@ locals {
   model_repository = join("-", [local.model_container_spec.framework, local.model_container_spec.base_framework, local.model_container_spec.image_scope])
   model_image_tag  = "${local.model_container_spec.framework_version}-transformers${local.model_container_spec.image_version}-${local.model_container_spec.processor}-${local.model_container_spec.python_version}-${local.model_container_spec.image_os}"
 
-  embedding_invocation_url = "https://runtime.sagemaker.${data.aws_region.current.name}.amazonaws.com/endpoints/${aws_sagemaker_endpoint.serverless_inference.name}/invocations"
+  
+  embedding_invocation_url = { for key, value in var.sagemaker_configurations : key => "https://runtime.sagemaker.${data.aws_region.current.name}.amazonaws.com/endpoints/${aws_sagemaker_endpoint.serverless_inference[key].name}/invocations" }
 }
 
 resource "aws_s3_bucket" "sagemaker_model_bucket" {
@@ -40,10 +41,10 @@ resource "terraform_data" "inference_model_artifact" {
 }
 
 resource "aws_s3_object" "inference_model_artifact" {
-  bucket            = aws_s3_bucket.sagemaker_model_bucket.bucket
-  key               = "custom_inference/${local.model_id}/${local.model_id}.tar.gz"
-  source            = terraform_data.inference_model_artifact.output
-  content_type      = "application/gzip"
+  bucket       = aws_s3_bucket.sagemaker_model_bucket.bucket
+  key          = "custom_inference/${local.model_id}/${local.model_id}.tar.gz"
+  source       = terraform_data.inference_model_artifact.output
+  content_type = "application/gzip"
 }
 
 data "aws_sagemaker_prebuilt_ecr_image" "inference_container" {
@@ -53,20 +54,20 @@ data "aws_sagemaker_prebuilt_ecr_image" "inference_container" {
 
 data "aws_iam_policy_document" "embedding_model_execution_assume_role" {
   statement {
-    effect    = "Allow"
-    actions   = ["sts:AssumeRole"]
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
 
     principals {
-      type          = "Service"
-      identifiers   = ["sagemaker.amazonaws.com"]
+      type        = "Service"
+      identifiers = ["sagemaker.amazonaws.com"]
     }
   }
 }
 
 data "aws_iam_policy_document" "embedding_model_execution_role" {
   statement {
-    effect    = "Allow"
-    actions   = [
+    effect  = "Allow"
+    actions = [
       "cloudwatch:PutMetricData",
       "logs:CreateLogStream",
       "logs:PutLogEvents",
@@ -78,13 +79,13 @@ data "aws_iam_policy_document" "embedding_model_execution_role" {
   }
 
   statement {
-    effect = "Allow"
-    actions = ["s3:GetObject"]
+    effect    = "Allow"
+    actions   = ["s3:GetObject"]
     resources = ["arn:aws:s3:::${aws_s3_bucket.sagemaker_model_bucket.bucket}/${aws_s3_object.inference_model_artifact.key}"]
   }
 
   statement {
-    effect = "Allow"
+    effect  = "Allow"
     actions = [
       "ecr:BatchCheckLayerAvailability",
       "ecr:GetDownloadUrlForLayer",
@@ -95,46 +96,50 @@ data "aws_iam_policy_document" "embedding_model_execution_role" {
 }
 
 resource "aws_iam_policy" "embedding_model_execution_role" {
-  name    = "${local.namespace}-sagemaker-model-execution-role"
-  policy  = data.aws_iam_policy_document.embedding_model_execution_role.json
+  name   = "${local.namespace}-sagemaker-model-execution-role"
+  policy = data.aws_iam_policy_document.embedding_model_execution_role.json
 }
 
 resource "aws_iam_role" "embedding_model_execution_role" {
-  name                  = "${local.namespace}-sagemaker-model-execution-role"
-  assume_role_policy    = data.aws_iam_policy_document.embedding_model_execution_assume_role.json
+  name               = "${local.namespace}-sagemaker-model-execution-role"
+  assume_role_policy = data.aws_iam_policy_document.embedding_model_execution_assume_role.json
 }
 
 resource "aws_iam_role_policy_attachment" "embedding_model_execution_role" {
-  role          = aws_iam_role.embedding_model_execution_role.id
-  policy_arn    = aws_iam_policy.embedding_model_execution_role.arn
+  role       = aws_iam_role.embedding_model_execution_role.id
+  policy_arn = aws_iam_policy.embedding_model_execution_role.arn
 }
 
 resource "aws_sagemaker_model" "embedding_model" {
-  name                  = "${local.namespace}-embedding-model"
-  execution_role_arn    = aws_iam_role.embedding_model_execution_role.arn
+  name               = "${local.namespace}-embedding-model"
+  execution_role_arn = aws_iam_role.embedding_model_execution_role.arn
   
   primary_container {
-    image             = data.aws_sagemaker_prebuilt_ecr_image.inference_container.registry_path
-    mode              = "SingleModel"
-    model_data_url    = "s3://${aws_s3_object.inference_model_artifact.bucket}/${aws_s3_object.inference_model_artifact.key}"
+    image          = data.aws_sagemaker_prebuilt_ecr_image.inference_container.registry_path
+    mode           = "SingleModel"
+    model_data_url = "s3://${aws_s3_object.inference_model_artifact.bucket}/${aws_s3_object.inference_model_artifact.key}"
   }
 }
 
 resource "aws_sagemaker_endpoint_configuration" "serverless_inference" {
-  name = "${local.namespace}-embedding-model"
-  production_variants {
-    model_name    = aws_sagemaker_model.embedding_model.name
-    variant_name  = "AllTraffic"
+  for_each = var.sagemaker_configurations
 
-    serverless_config {
-      memory_size_in_mb         = var.sagemaker_inference_memory
-      max_concurrency           = var.sagemaker_inference_max_concurrency
-      provisioned_concurrency   = var.sagemaker_inference_provisioned_concurrency > 0 ? var.sagemaker_inference_provisioned_concurrency : null
-    }
+  name = "${local.namespace}-embedding-model-${each.value.name}"
+  
+  production_variants {
+      model_name   = aws_sagemaker_model.embedding_model.name
+      variant_name = "AllTraffic"
+
+      serverless_config {
+        memory_size_in_mb       = each.value.memory
+        max_concurrency         = each.value.max_concurrency
+        provisioned_concurrency = each.value.provisioned_concurrency > 0 ? each.value.provisioned_concurrency : null
+      }
   }
 }
 
 resource "aws_sagemaker_endpoint" "serverless_inference" {
-  name                    = "${local.namespace}-embedding"
-  endpoint_config_name    = aws_sagemaker_endpoint_configuration.serverless_inference.name
+  for_each             = var.sagemaker_configurations
+  name                 = "${local.namespace}-embedding-${each.value.name}"
+  endpoint_config_name = aws_sagemaker_endpoint_configuration.serverless_inference[each.key].name
 }

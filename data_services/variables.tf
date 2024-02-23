@@ -19,20 +19,14 @@ variable "opensearch_volume_size" {
 }
 
 variable "model_repository" {
-  type    = string
+  type = string
 }
 
-variable "sagemaker_inference_memory" {
-  type    = number
-  default = 4096
-}
-
-variable "sagemaker_inference_provisioned_concurrency" {
-  type    = number
-  default = 0
-}
-
-variable "sagemaker_inference_max_concurrency" {
-  type    = number
-  default = 20
+variable "sagemaker_configurations" {
+  type = map(object({
+    name                    = string
+    memory                  = number
+    provisioned_concurrency = number
+    max_concurrency         = number
+  }))    
 }

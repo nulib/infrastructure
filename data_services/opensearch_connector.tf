@@ -1,7 +1,7 @@
 locals {
-  connector_spec = {
-    name          = "${local.namespace}-embedding"
-    description   = "Opensearch Connector for ${aws_sagemaker_endpoint.serverless_inference.name}"
+  connector_spec = { for key, config  in var.sagemaker_configurations : key => {
+    name          = "${local.namespace}-${config.name}-embedding"
+    description   = "Opensearch Connector for ${config.name}"
     version       = 1
     protocol      = "aws_sigv4"
 
@@ -23,12 +23,12 @@ locals {
           "content-type" = "application/json"
         }
 
-        url                     = local.embedding_invocation_url
+        url                     = local.embedding_invocation_url[key]
         post_process_function   = file("${path.module}/opensearch_connector/post-process.painless")
         request_body            = "{\"inputs\": $${parameters.input}}"
       }
     ]
-  }
+  }}
 }
 
 data "aws_iam_policy_document" "opensearch_connector_assume_role" {
@@ -50,7 +50,7 @@ data "aws_iam_policy_document" "opensearch_connector_role" {
       "sagemaker:InvokeEndpoint",
       "sagemaker:InvokeEndpointAsync"
     ]
-    resources = [aws_sagemaker_endpoint.serverless_inference.arn]
+    resources = [ for endpoint in aws_sagemaker_endpoint.serverless_inference : endpoint.arn ]
   }
 }
 
@@ -102,13 +102,14 @@ module "deploy_model_lambda" {
 }
 
 resource "aws_lambda_invocation" "deploy_model" {
+  for_each        = local.connector_spec
   function_name   = module.deploy_model_lambda.lambda_function_name
   lifecycle_scope = "CRUD"
 
   input = jsonencode({
     namespace         = local.namespace
-    connector_spec    = local.connector_spec
-    model_name        = "huggingface/${var.model_repository}"
+    connector_spec    = local.connector_spec[each.key]
+    model_name        = "huggingface/${var.model_repository}-${each.value.name}"
     model_version     = "1.0.0"
   })
 }
