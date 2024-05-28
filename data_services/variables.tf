@@ -8,6 +8,10 @@ variable "instance_class" {
   default = "db.t3.medium"
 }
 
+variable "ldap_config" {
+  type    = map(string)
+}
+
 variable "opensearch_cluster_nodes" {
   type    = number
   default = 3
