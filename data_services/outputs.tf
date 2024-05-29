@@ -43,6 +43,7 @@ output "postgres" {
     client_security_group = aws_security_group.db_client.id
     admin_user            = "dbadmin"
     admin_password        = random_string.db_master_password.result
+    maintenance_lambda    = module.maintenance_lambda.lambda_function_arn
   }
 }
 
