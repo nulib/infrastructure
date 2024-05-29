@@ -267,7 +267,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
             statement {
               label_match_statement {
                 scope = "LABEL"
-                key   = "awswaf:managed:aws:bot-control:bot:category:http_library"
+                key   = "awswaf:managed:aws:bot-control:signal:non_browser_user_agent"
               }
             }
           }
@@ -299,13 +299,13 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     statement {
       rate_based_statement {
         aggregate_key_type = "IP"
-        limit              = var.global_rate_limit
+        limit              = var.global_rate_limit / 4
 
         scope_down_statement {
-          label_match_statement {
-            scope = "LABEL"
-            key   = "awswaf:managed:aws:bot-control:bot:category:http_library"
-          }
+            label_match_statement {
+              scope = "LABEL"
+              key   = "awswaf:managed:aws:bot-control:signal:non_browser_user_agent"
+            }
         }
       }
     }
