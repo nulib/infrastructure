@@ -76,7 +76,7 @@ resource "aws_db_parameter_group" "db_parameter_group" {
 }
 
 resource "aws_db_instance" "db" {
-  allocated_storage         = 100
+  allocated_storage         = 125
   apply_immediately         = true
   engine                    = "postgres"
   engine_version            = var.postgres_version
@@ -103,7 +103,7 @@ module "maintenance_lambda" {
   handler                = "main.handler"
   runtime                = "python3.10"
   source_path            = "${path.module}/db_maintenance"
-  timeout                = 120
+  timeout                = 600
 
   vpc_subnet_ids         = module.core.outputs.vpc.public_subnets.ids
   vpc_security_group_ids = [aws_security_group.db_client.id]
