@@ -104,8 +104,16 @@ module "maintenance_lambda" {
   runtime                = "python3.10"
   source_path            = "${path.module}/db_maintenance"
   timeout                = 600
+  publish                = true
 
   vpc_subnet_ids         = module.core.outputs.vpc.public_subnets.ids
   vpc_security_group_ids = [aws_security_group.db_client.id]
   attach_network_policy  = true
+
+  allowed_triggers = {
+    DBMaintenanceRule = {
+
+      principal  = "events.amazonaws.com"
+    }
+  }
 }
