@@ -109,7 +109,7 @@ resource "aws_lambda_invocation" "deploy_model" {
   input = jsonencode({
     namespace         = local.namespace
     connector_spec    = local.connector_spec[each.key]
-    model_name        = "huggingface/${var.model_repository}-${each.value.name}"
+    model_name        = "${each.value.name}/huggingface/${var.model_repository}"
     model_version     = "1.0.0"
   })
 }

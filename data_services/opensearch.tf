@@ -23,7 +23,7 @@ resource "aws_security_group_rule" "elasticsearch_ingress" {
 
 resource "aws_opensearch_domain" "elasticsearch" {
   domain_name       = "${local.namespace}-index"
-  engine_version    = "OpenSearch_2.11"
+  engine_version    = "OpenSearch_2.13"
   tags              = local.tags
 
   advanced_options = {
