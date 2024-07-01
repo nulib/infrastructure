@@ -1,3 +1,12 @@
+resource "aws_wafv2_ip_set" "nul_staff_ip_set" {
+  name               = "nul-staff-ips"
+  description        = "NU Library Staff IPv4 Addresses"
+  scope              = "REGIONAL"
+  ip_address_version = "IPV4"
+  addresses          = var.nul_staff_ips
+  tags               = local.tags
+}
+
 resource "aws_wafv2_ip_set" "nul_ip_set" {
   name               = "nul-ips"
   description        = "NU Library IPv4 Addresses"

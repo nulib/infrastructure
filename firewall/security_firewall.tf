@@ -28,9 +28,124 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     content_type = "TEXT_PLAIN"
   }
 
+  custom_response_body {
+    key          = "meadow_access_denied"
+    content      = file("${path.module}/meadow_403.html")
+    content_type = "TEXT_HTML"
+  }
+
+  rule {
+    name     = "${local.namespace}-allow-honeybadger"
+    priority = 10
+
+    action {
+      allow {}
+    }
+
+    statement {
+      regex_match_statement {
+        regex_string        = join("|", var.honeybadger_tokens)
+        field_to_match {
+          single_header {
+            name            = "honeybadger-token"
+          }
+        }
+        text_transformation {
+          priority = 0
+          type     = "NONE"
+        }
+      }
+    }
+    
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-allow-honeybadger"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "${local.namespace}-allow-nul-staff-ips"
+    priority = 20
+
+    action {
+      allow {}
+    }
+
+    statement {
+      ip_set_reference_statement {
+        arn = aws_wafv2_ip_set.nul_staff_ip_set.arn
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-allow-nul-staff-ips"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "${local.namespace}-block-meadow-access"
+    priority = 30
+
+    action {
+      block {
+        custom_response {
+          custom_response_body_key = "meadow_access_denied"
+          response_code            = 403
+        }
+      }
+    }
+
+    statement {
+      or_statement {
+        statement {
+          size_constraint_statement {
+            field_to_match {
+              single_header {
+                name = "host"
+              }
+            }
+
+            comparison_operator   = "EQ"
+            size                  = 0
+
+            text_transformation {
+              priority = 0
+              type     = "NONE"
+            }
+          }
+        }
+
+        statement {
+          byte_match_statement {
+            positional_constraint = "STARTS_WITH"
+            search_string         = "meadow."
+            field_to_match {
+              single_header {
+                name                = "host"
+              }
+            }
+            text_transformation {
+              priority = 0
+              type     = "LOWERCASE"
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-block-meadow-access"
+      sampled_requests_enabled   = true
+    }
+  }
+
   rule {
     name     = "${local.namespace}-allow-nul-ips"
-    priority = 0
+    priority = 40
 
     rule_label {
       name = "nul:internal-ip:v4"
@@ -56,7 +171,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-${local.namespace}-allow-nul-ips-v6"
-    priority = 1
+    priority = 50
 
     rule_label {
       name = "nul:internal-ip:v6"
@@ -81,7 +196,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-allowed-user-agents"
-    priority = 2
+    priority = 60
 
     action {
       allow {}
@@ -118,62 +233,9 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     }
   }
 
-  # Reputation Lists
-  # Exempt the Meadow API from any rate limits defined later
-  rule {
-    name     = "${local.namespace}-allow-meadow-api"
-    priority = 3
-
-    action {
-      allow {}
-    }
-
-    statement {
-      and_statement {
-        statement {
-          byte_match_statement {
-            positional_constraint = "CONTAINS"
-            search_string         = "meadow"
-            field_to_match {
-              single_header {
-                name = "host"
-              }
-            }
-            text_transformation {
-              priority = 0
-              type     = "LOWERCASE"
-            }
-          }
-        }
-
-        statement {
-          byte_match_statement {
-            positional_constraint = "STARTS_WITH"
-            search_string         = "/api/"
-
-            field_to_match {
-              uri_path {}
-            }
-
-            text_transformation {
-              priority = 0
-              type     = "NONE"
-            }
-          }
-        }
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${local.namespace}-allow-meadow-api"
-      sampled_requests_enabled   = true
-    }
-  }
-
   rule {
     name     = "${local.namespace}-aws-managed-ip-reputation-list"
-    priority = 4
+    priority = 80
 
     override_action {
       none {}
@@ -195,7 +257,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   
   rule {
     name     = "${local.namespace}-aws-managed-bot-control"
-    priority = 5
+    priority = 90
 
     override_action {
       none {}
@@ -229,7 +291,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-high-traffic-ips"
-    priority = 6
+    priority = 100
 
     action {
       block {}
@@ -251,7 +313,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   # Challenge browsers that exceed the rate limit
   rule {
     name     = "${local.namespace}-browser-rate-limiter"
-    priority = 7
+    priority = 110
 
     action {
       challenge {}
@@ -285,7 +347,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   # Rate limit (HTTP status 429) HTTP client libraries that exceed the rate limit
   rule {
     name     = "${local.namespace}-http-client-rate-limiter"
-    priority = 8
+    priority = 120
 
     action {
       block {
@@ -319,7 +381,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-common"
-    priority = 9
+    priority = 130
 
     override_action {
       none {}
@@ -353,7 +415,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-known-bad-inputs"
-    priority = 10
+    priority = 140
 
     override_action {
       none {}
