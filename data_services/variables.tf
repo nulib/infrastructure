@@ -26,6 +26,10 @@ variable "model_repository" {
   type = string
 }
 
+variable "model_requirements" {
+  type = list(string)
+}
+
 variable "sagemaker_configurations" {
   type = map(object({
     name                    = string

@@ -10,13 +10,13 @@ def mean_pooling(model_output, attention_mask):
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 
-def model_fn(model_dir):
+def model_fn(model_dir, context=None):
   # Load model from HuggingFace Hub
-  tokenizer = AutoTokenizer.from_pretrained(model_dir)
-  model = AutoModel.from_pretrained(model_dir)
+  tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
+  model = AutoModel.from_pretrained(model_dir, trust_remote_code=True)
   return model, tokenizer
 
-def predict_fn(data, model_and_tokenizer):
+def predict_fn(data, model_and_tokenizer, context=None):
     # destruct model and tokenizer
     model, tokenizer = model_and_tokenizer
     

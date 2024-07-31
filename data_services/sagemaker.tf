@@ -34,8 +34,9 @@ resource "terraform_data" "inference_model_artifact" {
     working_dir = "${path.module}/model"
 
     environment = {
-      model_id   = local.model_id
-      repository = var.model_repository
+      model_id     = local.model_id
+      repository   = var.model_repository
+      requirements = join("\n", var.model_requirements)
     }
   }
 }
