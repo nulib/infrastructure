@@ -7,9 +7,9 @@ locals {
 }
 
 resource "aws_cloudwatch_log_group" "security_firewall_log" {
-  name                = "aws-waf-logs-${local.namespace}-load-balancer-firewall"
-  retention_in_days   = 7
-  tags                = local.tags
+  name              = "aws-waf-logs-${local.namespace}-load-balancer-firewall"
+  retention_in_days = 7
+  tags              = local.tags
 }
 
 resource "aws_wafv2_web_acl" "security_firewall" {
@@ -36,7 +36,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-allow-honeybadger"
-    priority = 10
+    priority = 0
 
     action {
       allow {}
@@ -44,10 +44,10 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
     statement {
       regex_match_statement {
-        regex_string        = join("|", var.honeybadger_tokens)
+        regex_string = join("|", var.honeybadger_tokens)
         field_to_match {
           single_header {
-            name            = "honeybadger-token"
+            name = "honeybadger-token"
           }
         }
         text_transformation {
@@ -56,7 +56,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
         }
       }
     }
-    
+
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "${local.namespace}-allow-honeybadger"
@@ -66,7 +66,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-allow-nul-staff-ips"
-    priority = 20
+    priority = 1
 
     action {
       allow {}
@@ -87,7 +87,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-block-meadow-access"
-    priority = 30
+    priority = 2
 
     action {
       block {
@@ -108,8 +108,8 @@ resource "aws_wafv2_web_acl" "security_firewall" {
               }
             }
 
-            comparison_operator   = "EQ"
-            size                  = 0
+            comparison_operator = "EQ"
+            size                = 0
 
             text_transformation {
               priority = 0
@@ -124,7 +124,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
             search_string         = "meadow."
             field_to_match {
               single_header {
-                name                = "host"
+                name = "host"
               }
             }
             text_transformation {
@@ -145,7 +145,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-allow-nul-ips"
-    priority = 40
+    priority = 3
 
     rule_label {
       name = "nul:internal-ip:v4"
@@ -171,7 +171,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-${local.namespace}-allow-nul-ips-v6"
-    priority = 50
+    priority = 4
 
     rule_label {
       name = "nul:internal-ip:v6"
@@ -196,7 +196,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-allowed-user-agents"
-    priority = 60
+    priority = 5
 
     action {
       allow {}
@@ -213,7 +213,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
               search_string         = user_agent.key
               field_to_match {
                 single_header {
-                  name                = "user-agent"
+                  name = "user-agent"
                 }
               }
               text_transformation {
@@ -235,7 +235,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-ip-reputation-list"
-    priority = 80
+    priority = 6
 
     override_action {
       none {}
@@ -254,10 +254,10 @@ resource "aws_wafv2_web_acl" "security_firewall" {
       sampled_requests_enabled   = true
     }
   }
-  
+
   rule {
     name     = "${local.namespace}-aws-managed-bot-control"
-    priority = 90
+    priority = 7
 
     override_action {
       none {}
@@ -291,7 +291,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-high-traffic-ips"
-    priority = 100
+    priority = 8
 
     action {
       block {}
@@ -309,11 +309,11 @@ resource "aws_wafv2_web_acl" "security_firewall" {
       sampled_requests_enabled   = true
     }
   }
-  
+
   # Challenge browsers that exceed the rate limit
   rule {
     name     = "${local.namespace}-browser-rate-limiter"
-    priority = 110
+    priority = 9
 
     action {
       challenge {}
@@ -322,7 +322,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     statement {
       rate_based_statement {
         aggregate_key_type = "IP"
-        limit              = var.global_rate_limit
+        limit              = 1000
 
         scope_down_statement {
           not_statement {
@@ -347,7 +347,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   # Rate limit (HTTP status 429) HTTP client libraries that exceed the rate limit
   rule {
     name     = "${local.namespace}-http-client-rate-limiter"
-    priority = 120
+    priority = 10
 
     action {
       block {
@@ -361,13 +361,13 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     statement {
       rate_based_statement {
         aggregate_key_type = "IP"
-        limit              = var.global_rate_limit / 4
+        limit              = 500
 
         scope_down_statement {
-            label_match_statement {
-              scope = "LABEL"
-              key   = "awswaf:managed:aws:bot-control:signal:non_browser_user_agent"
-            }
+          label_match_statement {
+            scope = "LABEL"
+            key   = "awswaf:managed:aws:bot-control:signal:non_browser_user_agent"
+          }
         }
       }
     }
@@ -381,7 +381,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-common"
-    priority = 130
+    priority = 11
 
     override_action {
       none {}
@@ -415,7 +415,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-known-bad-inputs"
-    priority = 140
+    priority = 12
 
     override_action {
       none {}

@@ -13,11 +13,6 @@ variable "high_traffic_ips" {
   default = []
 }
 
-variable "global_rate_limit" {
-  type    = number
-  default = 1000
-}
-
 variable "honeybadger_tokens" {
   type    = list(string)
   default = []
