@@ -28,6 +28,14 @@ locals {
         request_body            = "{\"inputs\": $${parameters.input}}"
       }
     ]
+
+    client_config = {
+      max_connections = 500
+      connection_timeout = 5
+      read_timeout = 5
+      max_retry_times	= 3
+      retry_timeout_seconds = 15
+    }
   }}
 }
 
