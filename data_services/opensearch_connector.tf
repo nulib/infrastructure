@@ -30,11 +30,9 @@ locals {
     ]
 
     client_config = {
-      max_connections = 500
-      connection_timeout = 5
-      read_timeout = 5
-      max_retry_times	= 3
-      retry_timeout_seconds = 15
+      max_connections = config.max_concurrency / var.opensearch_cluster_nodes
+      connection_timeout = 5000
+      read_timeout = 60000
     }
   }}
 }

@@ -27,7 +27,8 @@ variable "model_repository" {
 }
 
 variable "model_requirements" {
-  type = list(string)
+  type    = list(string)
+  default = []
 }
 
 variable "sagemaker_configurations" {
