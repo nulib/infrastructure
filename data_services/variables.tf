@@ -26,12 +26,6 @@ variable "embedding_model_name" {
   type = string
 }
 
-<<<<<<< HEAD
-variable "model_requirements" {
-  type    = list(string)
-  default = []
-=======
 variable "embedding_dimensions" {
   type = number
->>>>>>> 9b6d2ca (Replace SageMaker with Bedrock connector for generating embeddings)
 }
