@@ -29,6 +29,12 @@ locals {
         request_body          = "{\"texts\": $${parameters.input}, \"input_type\": \"search_document\"}"
       }
     ]
+
+    client_config = {
+      max_connection        = 200
+      connection_timeout    = 5000
+      read_timeout          = 60000
+    }
   }
 }
 
@@ -79,7 +85,7 @@ data "aws_iam_policy_document" "deploy_model_lambda" {
 
   statement {
     effect    = "Allow"
-    actions   = ["es:ESHttpGet", "es:ESHttpPost"]
+    actions   = ["es:ESHttp*"]
     resources = ["${aws_opensearch_domain.elasticsearch.arn}/*"]
   }
 }

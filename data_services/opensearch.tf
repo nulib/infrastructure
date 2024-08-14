@@ -31,6 +31,12 @@ resource "aws_opensearch_domain" "elasticsearch" {
     "rest.action.multi.allow_explicit_index" = "true"
   }
 
+  log_publishing_options {
+    cloudwatch_log_group_arn    = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current_user.account_id}:log-group:/aws/OpenSearchService/domains/${local.namespace}-index/application-logs"
+    enabled                     = true
+    log_type                    = "ES_APPLICATION_LOGS"
+  }
+
   cluster_config {
     instance_type             = "m6g.large.search"
     instance_count            = var.opensearch_cluster_nodes
