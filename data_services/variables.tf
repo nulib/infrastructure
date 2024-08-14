@@ -9,7 +9,7 @@ variable "instance_class" {
 }
 
 variable "ldap_config" {
-  type    = map(string)
+  type = map(string)
 }
 
 variable "opensearch_cluster_nodes" {
@@ -22,20 +22,16 @@ variable "opensearch_volume_size" {
   default = 10
 }
 
-variable "model_repository" {
+variable "embedding_model_name" {
   type = string
 }
 
+<<<<<<< HEAD
 variable "model_requirements" {
   type    = list(string)
   default = []
-}
-
-variable "sagemaker_configurations" {
-  type = map(object({
-    name                    = string
-    memory                  = number
-    provisioned_concurrency = number
-    max_concurrency         = number
-  }))    
+=======
+variable "embedding_dimensions" {
+  type = number
+>>>>>>> 9b6d2ca (Replace SageMaker with Bedrock connector for generating embeddings)
 }

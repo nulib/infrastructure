@@ -1,22 +1,22 @@
 locals {
   secrets = {
     db = {
-      host        = aws_db_instance.db.address
-      port        = aws_db_instance.db.port
-      username    = "dbadmin"
-      password    = random_string.db_master_password.result
+      host     = aws_db_instance.db.address
+      port     = aws_db_instance.db.port
+      username = "dbadmin"
+      password = random_string.db_master_password.result
     }
 
     index = {
-      endpoint    = aws_opensearch_domain.elasticsearch.endpoint
-      models      = { for key, value in local.deploy_model_body : key => lookup(value, "model_id", "DEPLOY ERROR") }
+      endpoint = aws_opensearch_domain.elasticsearch.endpoint
+      models   = lookup(local.deploy_model_body, "model_id", "DEPLOY ERROR")
     }
 
     inference = {
-      endpoints = { for key, value in local.deploy_model_body : key => {    
-        name        = aws_sagemaker_endpoint.serverless_inference[key].name
-        endpoint    = local.embedding_invocation_url[key]
-      }}
+      endpoints = {
+        name     = var.embedding_model_name
+        endpoint = "https://bedrock-runtime.${data.aws_region.current.name}.amazonaws.com/model/${var.embedding_model_name}/invoke"
+      }
     }
 
     ldap = var.ldap_config

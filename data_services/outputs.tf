@@ -1,6 +1,6 @@
 locals {
-  deploy_model_result   = { for key in keys(var.sagemaker_configurations) : key => jsondecode(aws_lambda_invocation.deploy_model[key].result) }
-  deploy_model_body     = { for key in keys(var.sagemaker_configurations) : key => jsondecode(local.deploy_model_result[key].body) }
+  deploy_model_result = jsondecode(aws_lambda_invocation.deploy_model.result)
+  deploy_model_body   = jsondecode(local.deploy_model_result.body)
 }
 
 output "elasticsearch" {
@@ -14,22 +14,22 @@ output "elasticsearch" {
 }
 
 output "inference" {
-  value = { for key, value in local.deploy_model_body : key => {    
-    endpoint_name         = aws_sagemaker_endpoint.serverless_inference[key].name
-    invocation_url        = local.embedding_invocation_url[key]
-    opensearch_model_id   = lookup(value, "model_id", "DEPLOY ERROR")
-  }}
+  value = {
+    endpoint_name       = var.embedding_model_name
+    invocation_url      = "https://bedrock-runtime.${data.aws_region.current.name}.amazonaws.com/model/${var.embedding_model_name}/invoke"
+    opensearch_model_id = lookup(local.deploy_model_body, "model_id", "DEPLOY ERROR")
+  }
 }
 
 output "search_snapshot_configuration" {
   value = {
-    create_url    = "https://${aws_opensearch_domain.elasticsearch.endpoint}/_snapshot/"
-    create_doc    = jsonencode({
-      type     = "s3"
+    create_url = "https://${aws_opensearch_domain.elasticsearch.endpoint}/_snapshot/"
+    create_doc = jsonencode({
+      type = "s3"
       settings = {
-        bucket    = aws_s3_bucket.elasticsearch_snapshot_bucket.id
-        region    = data.aws_region.current.name
-        role_arn  = aws_iam_role.elasticsearch_snapshot_bucket_access.arn
+        bucket   = aws_s3_bucket.elasticsearch_snapshot_bucket.id
+        region   = data.aws_region.current.name
+        role_arn = aws_iam_role.elasticsearch_snapshot_bucket_access.arn
       }
     })
   }
