@@ -4,12 +4,25 @@ terraform {
   }
 
   required_providers {
-    aws = "~> 4.0"
+    aws = "~> 5.19"
   }
   required_version = ">= 1.3.0"
 }
 
-provider "aws" { }
+provider "aws" {
+  default_tags {
+    tags = local.tags
+  }
+}
+
+provider "aws" {
+  alias  = "west"
+  region = "us-west-2"
+
+  default_tags {
+    tags = local.tags
+  }
+}
 
 # Set up `module.core.outputs. as an alias for the VPC remote state
 # Create convenience accessors for `environment` and `namespace`
@@ -51,19 +64,15 @@ data "aws_region" "current" {}
 
 resource "aws_ecs_cluster" "fcrepo" {
   name = "fcrepo"
-  tags = local.tags
 }
 
 resource "aws_cloudwatch_log_group" "fcrepo_logs" {
   name                = "/ecs/fcrepo"
   retention_in_days   = 3
-  tags                = local.tags
 }
 
 resource "aws_s3_bucket" "fedora_binary_bucket" {
   bucket = "${local.namespace}-fedora-binaries"
-
-  tags   = local.tags
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "fedora_binary_bucket" {
@@ -90,7 +99,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "fedora_binary_bucket" {
 resource "aws_iam_user" "fedora_binary_bucket_user" {
   name = "${local.namespace}-fcrepo"
   path = "/system/"
-  tags = local.tags
 }
 
 resource "aws_iam_access_key" "fedora_binary_bucket_access_key" {
@@ -131,12 +139,21 @@ data "aws_iam_policy_document" "fedora_binary_bucket_access" {
 resource "aws_iam_policy" "fedora_binary_bucket_policy" {
   name   = "${local.namespace}-fcrepo-s3-bucket-access"
   policy = data.aws_iam_policy_document.fedora_binary_bucket_access.json
-  tags   = local.tags
 }
 
 resource "aws_iam_user_policy_attachment" "fedora_binary_bucket_user_access" {
   user       = aws_iam_user.fedora_binary_bucket_user.name
   policy_arn = aws_iam_policy.fedora_binary_bucket_policy.arn
+}
+
+module "fedora_binary_bucket_replication" {
+  source              = "../modules/replication"
+  count               = module.core.outputs.stack.environment == "p" ? 1 : 0
+  source_bucket_arn   = aws_s3_bucket.fedora_binary_bucket.arn
+  providers = {
+    aws.source = aws
+    aws.target = aws.west
+  }
 }
 
 module "fcrepo_schema" {
@@ -148,8 +165,6 @@ resource "aws_security_group" "fcrepo_service" {
   name        = "${local.namespace}-fcrepo-service"
   description = "Fedora Repository Service Security Group"
   vpc_id      = module.core.outputs.vpc.id
-
-  tags = local.tags
 }
 
 resource "aws_security_group_rule" "fcrepo_service_egress" {
@@ -174,13 +189,11 @@ resource "aws_security_group" "fcrepo_client" {
   name        = "${local.namespace}-fcrepo-client"
   description = "Fedora Repository Client Security Group"
   vpc_id      = module.core.outputs.vpc.id
-  tags        = local.tags
 }
 
 resource "aws_iam_role" "fcrepo_task_role" {
   name               = "fcrepo"
   assume_role_policy = module.core.outputs.ecs.assume_role_policy
-  tags               = local.tags
 }
 
 resource "aws_iam_role_policy_attachment" "fcrepo_binary_bucket_access" {
@@ -246,7 +259,6 @@ resource "aws_ecs_task_definition" "fcrepo" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.cpu
   memory                   = var.memory
-  tags                     = local.tags
 }
 
 resource "aws_service_discovery_service" "fcrepo" {
@@ -261,8 +273,6 @@ resource "aws_service_discovery_service" "fcrepo" {
 
     routing_policy = "MULTIVALUE"
   }
-
-  tags = local.tags
 }
 
 resource "aws_ecs_service" "fcrepo" {
@@ -290,6 +300,4 @@ resource "aws_ecs_service" "fcrepo" {
   service_registries {
     registry_arn = aws_service_discovery_service.fcrepo.arn
   }
-
-  tags = local.tags
 }
