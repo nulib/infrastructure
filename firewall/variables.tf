@@ -13,6 +13,19 @@ variable "high_traffic_ips" {
   default = []
 }
 
+variable "global_rate_limit" {
+  type        = number
+  description = "Global rate limit for requests"
+  default     = 2000
+}
+
+
+variable "high_traffic_ips_aug2024" {
+  type        = list(string)
+  description = "List of High Traffic IPs added by Marek August 2024"
+  default     = []
+}
+
 variable "honeybadger_tokens" {
   type    = list(string)
   default = []

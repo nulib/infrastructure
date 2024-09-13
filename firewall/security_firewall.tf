@@ -310,10 +310,31 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     }
   }
 
+  rule {
+    name     = "${local.namespace}-high-traffic-ips-aug2024"
+    priority = 9
+
+    action {
+      block {}
+    }
+
+    statement {
+      ip_set_reference_statement {
+        arn = aws_wafv2_ip_set.high_traffic_ips_aug2024.arn
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-high-traffic-ips-aug2024"
+      sampled_requests_enabled   = true
+    }
+  }
+
   # Challenge browsers that exceed the rate limit
   rule {
     name     = "${local.namespace}-browser-rate-limiter"
-    priority = 9
+    priority = 10
 
     action {
       challenge {}
@@ -321,8 +342,9 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
     statement {
       rate_based_statement {
-        aggregate_key_type = "IP"
-        limit              = 1000
+        aggregate_key_type    = "IP"
+        limit                 = 100
+        evaluation_window_sec = 300
 
         scope_down_statement {
           not_statement {
@@ -344,10 +366,46 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     }
   }
 
+  rule {
+    name     = "${local.namespace}-non-browser-user-agent-block"
+    priority = 11
+
+    action {
+      block {}
+    }
+
+    statement {
+      and_statement {
+        statement {
+          label_match_statement {
+            scope = "LABEL"
+            key   = "awswaf:managed:aws:bot-control:signal:non_browser_user_agent"
+          }
+        }
+        statement {
+          not_statement {
+            statement {
+              label_match_statement {
+                scope = "LABEL"
+                key   = "awswaf:managed:aws:bot-control:bot:category:http_library"
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-non-browser-user-agent-block"
+      sampled_requests_enabled   = true
+    }
+  }
+
   # Rate limit (HTTP status 429) HTTP client libraries that exceed the rate limit
   rule {
     name     = "${local.namespace}-http-client-rate-limiter"
-    priority = 10
+    priority = 12
 
     action {
       block {
@@ -360,13 +418,24 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
     statement {
       rate_based_statement {
-        aggregate_key_type = "IP"
-        limit              = 500
+        aggregate_key_type    = "IP"
+        limit                 = 500
+        evaluation_window_sec = 300
 
         scope_down_statement {
-          label_match_statement {
-            scope = "LABEL"
-            key   = "awswaf:managed:aws:bot-control:signal:non_browser_user_agent"
+          and_statement {
+            statement {
+              label_match_statement {
+                scope = "LABEL"
+                key   = "awswaf:managed:aws:bot-control:signal:non_browser_user_agent"
+              }
+            }
+            statement {
+              label_match_statement {
+                scope = "LABEL"
+                key   = "awswaf:managed:aws:bot-control:bot:category:http_library"
+              }
+            }
           }
         }
       }
@@ -381,7 +450,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-common"
-    priority = 11
+    priority = 13
 
     override_action {
       none {}
@@ -415,7 +484,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-known-bad-inputs"
-    priority = 12
+    priority = 14
 
     override_action {
       none {}
@@ -426,10 +495,14 @@ resource "aws_wafv2_web_acl" "security_firewall" {
         name        = "AWSManagedRulesKnownBadInputsRuleSet"
         vendor_name = "AWS"
 
-        dynamic "excluded_rule" {
+        dynamic "rule_action_override" {
           for_each = toset(local.excluded_rules["AWSManagedRulesKnownBadInputsRuleSet"])
           iterator = rule
           content {
+            action_to_use {
+              count {}
+            }
+
             name = rule.key
           }
         }

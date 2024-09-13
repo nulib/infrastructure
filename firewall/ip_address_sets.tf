@@ -33,3 +33,12 @@ resource "aws_wafv2_ip_set" "high_traffic_ip_set" {
   addresses          = var.high_traffic_ips
   tags               = local.tags
 }
+
+resource "aws_wafv2_ip_set" "high_traffic_ips_aug2024" {
+  name               = "high-traffic-ips-AUG2024"
+  description        = "High Traffic IPs added by Marek August 2024"
+  scope              = "REGIONAL"
+  ip_address_version = "IPV4"
+  addresses          = var.high_traffic_ips_aug2024
+  tags               = local.tags
+}
