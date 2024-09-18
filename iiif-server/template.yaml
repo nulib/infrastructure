@@ -1,0 +1,212 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform:
+  - AWS::Serverless-2016-10-31
+  - AWS::LanguageExtensions
+Description: >
+  nul-iiif-server
+
+  Deployment wrapper for NUL instance of serverless-iiif
+Parameters:
+  Hostname:
+    Type: String
+  DomainName:
+    Type: String
+  AllowFromReferers:
+    Type: String
+    Default: ""
+  CertificateArn:
+    Type: String
+  DcApiEndpoint:
+    Type: String
+  IiifLambdaMemory:
+    Type: Number
+    Default: 2048
+  IiifLambdaTimeout:
+    Type: Number
+    Default: 10
+  Namespace:
+    Type: String
+  ServerlessIiifVersion:
+    Type: String
+    Default: 5.0.0
+  SourceBucket:
+    Type: String
+Resources:
+  ServerlessIiif:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location:
+        ApplicationId: arn:aws:serverlessrepo:us-east-1:625046682746:applications/serverless-iiif
+        SemanticVersion: !Ref ServerlessIiifVersion
+      Parameters:
+        CorsAllowCredentials: "true"
+        CorsAllowHeaders: "authorization, cookie"
+        CorsAllowOrigin: REFLECT_ORIGIN
+        ForceHost: !Sub "${Hostname}.${DomainName}"
+        IiifLambdaMemory: !Ref IiifLambdaMemory
+        IiifLambdaTimeout: !Ref IiifLambdaTimeout
+        PixelDensity: 600
+        Preflight: "true"
+        SharpLayer: "INTERNAL"
+        SourceBucket: !Ref SourceBucket
+  ViewerRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: nodejs18.x
+      CodeUri: ./src
+      Handler: index.handler
+      Architectures:
+        - x86_64
+      Timeout: 3
+      MemorySize: 128
+      AutoPublishAlias: "Latest"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - edgelambda.amazonaws.com
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+  ViewerRequestSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Ref ViewerRequestFunction
+      SecretString: 
+        Fn::ToJsonString:
+          allowFrom: !Ref AllowFromReferers
+          dcApiEndpoint: !Ref DcApiEndpoint
+          tiffBucket: !Ref SourceBucket
+  ViewerRequestSecretAccess:
+    Type: AWS::SecretsManager::ResourcePolicy
+    Properties: 
+      BlockPublicPolicy: true
+      ResourcePolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:DescribeSecret
+              - secretsmanager:GetSecretValue
+            Principal:
+              AWS: !GetAtt ViewerRequestFunctionRole.Arn
+            Resource: "*"
+      SecretId: !Ref ViewerRequestSecret
+  ConfigurationSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub "${Namespace}/iiif-url"
+      SecretString:
+        Fn::ToJsonString:
+          base: !Sub "https://${Hostname}.${DomainName}/"
+          v2: !Sub "https://${Hostname}.${DomainName}/iiif/2/"
+          v3: !Sub "https://${Hostname}.${DomainName}/iiif/3/"
+  OriginRequestPolicy:
+    Type: "AWS::CloudFront::OriginRequestPolicy"
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub "${AWS::StackName}-allow-preflight-headers"
+        Comment: Allows IIIF preflight headers
+        CookiesConfig:
+          CookieBehavior: none
+        HeadersConfig:
+          HeaderBehavior: whitelist
+          Headers:
+            - x-preflight-location
+            - x-preflight-dimensions
+        QueryStringsConfig:
+          QueryStringBehavior: none
+  ResponseHeaderPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub "${AWS::StackName}-allow-cors-response-headers"
+        Comment: Allows IIIF CORS response headers
+        CorsConfig:
+          AccessControlAllowCredentials: false
+          AccessControlAllowHeaders:
+            Items:
+              - "*"
+          AccessControlAllowMethods:
+            Items:
+              - GET
+              - OPTIONS
+          AccessControlAllowOrigins:
+            Items:
+              - "*"
+          AccessControlExposeHeaders:
+            Items:
+              - cache-control
+              - content-language
+              - content-length
+              - content-type
+              - date
+              - expires
+              - last-modified
+              - pragma
+          AccessControlMaxAgeSec: 3600
+          OriginOverride: false
+  CachingDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        PriceClass: PriceClass_100
+        Aliases:
+          - !Sub "${Hostname}.${DomainName}"
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          MinimumProtocolVersion: TLSv1
+          SslSupportMethod: sni-only
+        Origins:
+          - Id: IiifLambda
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+            DomainName: !GetAtt ServerlessIiif.Outputs.FunctionDomain
+          - Id: PublicManifests
+            DomainName:
+              Fn::Sub: ${SourceBucket}.s3.${AWS::Region}.amazonaws.com
+            S3OriginConfig: {}
+        DefaultCacheBehavior:
+          TargetOriginId: IiifLambda
+          ViewerProtocolPolicy: https-only
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          OriginRequestPolicyId: !Ref OriginRequestPolicy
+          ResponseHeadersPolicyId: !Ref ResponseHeaderPolicy
+          LambdaFunctionAssociations:
+            - EventType: viewer-request
+              LambdaFunctionARN: !Ref ViewerRequestFunction.Version
+              IncludeBody: false
+        CacheBehaviors:
+          - AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            ResponseHeadersPolicyId: !Ref ResponseHeaderPolicy
+            PathPattern: "public/*"
+            TargetOriginId: PublicManifests
+            ViewerProtocolPolicy: https-only
+  Route53Record:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: !Sub "${Hostname}.${DomainName}"
+      HostedZoneName: !Sub "${DomainName}."
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt CachingDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2

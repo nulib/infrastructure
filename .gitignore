@@ -1,7 +1,15 @@
+# Terraform
 **/.terraform
 **/builds
 *.tfstate
 *.tfvars
 *.plan
+
+# SAM
+samconfig.*
+.aws-sam
+package.yml
+
+# Local Build
 node_modules
 data_services/model/.working
