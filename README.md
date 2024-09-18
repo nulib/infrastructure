@@ -19,10 +19,6 @@ Each folder should follow the same naming conventions:
 * `data.tf` – Contains terraform `data` sources, if there are enough of them to warrant splitting them out
 * `outputs.tf` – Contains only terraform outputs
 
-## Secrets
-
-Instead of using Terraform variables (and `.tfvars` files), which come with a host of security/maintenance/synchronization issues, each component or project should store a JSON string of their secrets in [AWS Server Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) under the `/tfvars/` namespace. These secrets can be referenced using the [`secrets` module](modules/secrets/README.md) in this repository. Please see that module's README file and other components within this repository for examples.
-
 ## Common Configuration
 
 Each folder should be initialized the same way:
