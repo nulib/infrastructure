@@ -21,6 +21,7 @@ provider "aws" {
 locals {
 #  environment   = module.core.outputs.stack.environment
   namespace     = module.core.outputs.stack.namespace
+  prefix        = module.core.outputs.stack.prefix
   tags          = merge(
     module.core.outputs.stack.tags, 
     {

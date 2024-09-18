@@ -25,7 +25,7 @@ locals {
 
 resource "aws_secretsmanager_secret" "data_services" {
   for_each    = local.secrets
-  name        = "${local.namespace}/infrastructure/${each.key}"
+  name        = "${local.prefix}/infrastructure/${each.key}"
   description = "${each.key} secrets for ${local.namespace}"
 }
 

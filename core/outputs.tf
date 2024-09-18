@@ -27,6 +27,7 @@ output "stack" {
     environment   = local.environment
     name          = var.stack_name
     namespace     = local.namespace
+    prefix        = terraform.workspace
     tags          = merge(var.tags, local.common_tags)
   }
 }
