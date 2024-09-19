@@ -97,7 +97,8 @@ Resources:
   ConfigurationSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub "${Namespace}/iiif-url"
+      Name: !Sub "${Namespace}/infrastructure/iiif"
+      Description: !Sub "iiif secrets for ${Namespace}"
       SecretString:
         Fn::ToJsonString:
           base: !Sub "https://${Hostname}.${DomainName}/"

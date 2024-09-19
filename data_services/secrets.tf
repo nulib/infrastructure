@@ -13,13 +13,11 @@ locals {
     }
 
     inference = {
-      endpoints = {
-        name     = var.embedding_model_name
-        endpoint = "https://bedrock-runtime.${data.aws_region.current.name}.amazonaws.com/model/${var.embedding_model_name}/invoke"
-      }
+      model_name = var.embedding_model_name
+      endpoint   = "https://bedrock-runtime.${data.aws_region.current.name}.amazonaws.com/model/${var.embedding_model_name}/invoke"
     }
 
-    ldap = var.ldap_config
+    ldap = merge(var.ldap_config, { port = tonumber(var.ldap_config["port"]) })
   }
 }
 
