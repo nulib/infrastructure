@@ -1,6 +1,10 @@
 const authorize = require("./authorize");
+const jwt = require('jsonwebtoken');
+const querystring = require('querystring');
+
 const middy = require("@middy/core");
 const secretsManager = require("@middy/secrets-manager");
+
 
 function getEventHeader(request, name) {
   if (
@@ -47,15 +51,57 @@ function parsePath(path) {
       filename: segments[0]
     };
   } else {
+    const filename = segments[0].split(".");
     return {
       poster: segments[5] == "posters",
       id: segments[4],
       region: segments[3],
       size: segments[2],
       rotation: segments[1],
-      filename: segments[0]
+      filename: segments[0],
+      quality: filename[0],
+      format: filename[1]
     };
   }
+}
+
+function getAuthSignature(request) {
+  if (!request.querystring) {
+    return null;
+  }
+
+  const parsedQuery = querystring.parse(request.querystring);
+  return parsedQuery['Auth-Signature'] || null;
+}
+
+function validateJwtClaims(jwtClaims, params) {
+  const currentTime = Math.floor(Date.now() / 1000);
+  const errors = [];
+
+  if (jwtClaims.exp <= currentTime) {
+    errors.push("Token expired");
+  }
+
+  if (jwtClaims.sub !== params.id) {
+    errors.push("ID mismatch");
+  }
+
+  const fields = ['region', 'size', 'rotation', 'quality', 'format'];
+  for (const field of fields) {
+    if (jwtClaims[field] && !jwtClaims[field].includes(params[field])) {
+      errors.push(`${field} mismatch`);
+    }
+  }
+
+  if (jwtClaims['max-width'] && params.size.width > jwtClaims['max-width']) {
+    errors.push("Width too large");
+  }
+
+  if (jwtClaims['max-height'] && params.size.height > jwtClaims['max-height']) {
+    errors.push("Height too large");
+  }
+
+  return errors;
 }
 
 async function viewerRequestIiif(request, { config }) {
@@ -63,6 +109,34 @@ async function viewerRequestIiif(request, { config }) {
   const params = parsePath(path);
   const referer = getEventHeader(request, "referer");
   const cookie = getEventHeader(request, "cookie");
+  const authSignature = getAuthSignature(request);
+  
+  if(authSignature) {
+      console.log("Verifying JWT")
+      let jwtClaims;
+      try {
+        jwtClaims = jwt.verify(authSignature, config.apiTokenKey);
+      } catch (err) {
+        console.log(err)
+        return {
+          status: "403",
+          statusDescription: "Forbidden",
+          body: "Invalid JWT"
+        };
+      }
+
+      const jwtValidationErrors = validateJwtClaims(jwtClaims, params);
+  
+      if (jwtValidationErrors.length > 0) {
+        console.log(`Could not verify JWT claims: ${jwtValidationErrors.join(", ")}`)
+        return {
+          status: "403",
+          statusDescription: "Forbidden",
+          body: "Forbidden"
+        };
+      }
+  }
+  
   const authed = await authorize(
     params,
     referer,
