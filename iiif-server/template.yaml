@@ -148,6 +148,25 @@ Resources:
               - pragma
           AccessControlMaxAgeSec: 3600
           OriginOverride: false
+  VariableOriginCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        DefaultTTL: 86400
+        MaxTTL: 31536000
+        MinTTL: 1
+        Name: CachingOptimizedWithVariableOrigin
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig: 
+            CookieBehavior: none
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers:
+              - Origin
+          QueryStringsConfig:
+            QueryStringBehavior: none
   CachingDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -179,7 +198,7 @@ Resources:
           CachedMethods:
             - GET
             - HEAD
-          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          CachePolicyId: !Ref VariableOriginCachePolicy
           OriginRequestPolicyId: !Ref OriginRequestPolicy
           ResponseHeadersPolicyId: !Ref ResponseHeaderPolicy
           LambdaFunctionAssociations:
