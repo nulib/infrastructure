@@ -14,6 +14,8 @@ Parameters:
   AllowFromReferers:
     Type: String
     Default: ""
+  ApiTokenKey:
+    Type: String
   CertificateArn:
     Type: String
   DcApiEndpoint:
@@ -79,6 +81,7 @@ Resources:
           allowFrom: !Ref AllowFromReferers
           dcApiEndpoint: !Ref DcApiEndpoint
           tiffBucket: !Ref SourceBucket
+          apiTokenKey: !Ref ApiTokenKey
   ViewerRequestSecretAccess:
     Type: AWS::SecretsManager::ResourcePolicy
     Properties: 
