@@ -1,7 +1,6 @@
 const authorize = require("./authorize");
-const jwt = require('jsonwebtoken');
-const querystring = require('querystring');
-
+const validateJwtClaims = require("./validate-jwt");
+const jwt = require("jsonwebtoken");
 const middy = require("@middy/core");
 const secretsManager = require("@middy/secrets-manager");
 
@@ -16,6 +15,14 @@ function getEventHeader(request, name) {
   } else {
     return undefined;
   }
+}
+
+function s3Location(params, bucket) {
+  const pairtree = params.id.match(/.{1,2}/g).join("/");
+
+  return params.poster
+    ? `s3://${bucket}/posters/${pairtree}-poster.tif`
+    : `s3://${bucket}/${pairtree}-pyramid.tif`;
 }
 
 function viewerRequestOptions(request) {
@@ -48,7 +55,8 @@ function parsePath(path) {
     return {
       poster: segments[2] == "posters",
       id: segments[1],
-      filename: segments[0]
+      filename: segments[0],
+      version: segments[6]
     };
   } else {
     const filename = segments[0].split(".");
@@ -60,7 +68,8 @@ function parsePath(path) {
       rotation: segments[1],
       filename: segments[0],
       quality: filename[0],
-      format: filename[1]
+      format: filename[1],
+      version: segments[5]
     };
   }
 }
@@ -70,38 +79,8 @@ function getAuthSignature(request) {
     return null;
   }
 
-  const parsedQuery = querystring.parse(request.querystring);
-  return parsedQuery['Auth-Signature'] || null;
-}
-
-function validateJwtClaims(jwtClaims, params) {
-  const currentTime = Math.floor(Date.now() / 1000);
-  const errors = [];
-
-  if (jwtClaims.exp <= currentTime) {
-    errors.push("Token expired");
-  }
-
-  if (jwtClaims.sub !== params.id) {
-    errors.push("ID mismatch");
-  }
-
-  const fields = ['region', 'size', 'rotation', 'quality', 'format'];
-  for (const field of fields) {
-    if (jwtClaims[field] && !jwtClaims[field].includes(params[field])) {
-      errors.push(`${field} mismatch`);
-    }
-  }
-
-  if (jwtClaims['max-width'] && params.size.width > jwtClaims['max-width']) {
-    errors.push("Width too large");
-  }
-
-  if (jwtClaims['max-height'] && params.size.height > jwtClaims['max-height']) {
-    errors.push("Height too large");
-  }
-
-  return errors;
+  const parsedQuery = new URLSearchParams(request.querystring);
+  return parsedQuery.get('Auth-Signature', null)
 }
 
 async function viewerRequestIiif(request, { config }) {
@@ -110,33 +89,32 @@ async function viewerRequestIiif(request, { config }) {
   const referer = getEventHeader(request, "referer");
   const cookie = getEventHeader(request, "cookie");
   const authSignature = getAuthSignature(request);
-  
-  if(authSignature) {
-      console.log("Verifying JWT")
-      let jwtClaims;
-      try {
-        jwtClaims = jwt.verify(authSignature, config.apiTokenKey);
-      } catch (err) {
-        console.log(err)
-        return {
-          status: "403",
-          statusDescription: "Forbidden",
-          body: "Invalid JWT"
-        };
-      }
 
-      const jwtValidationErrors = validateJwtClaims(jwtClaims, params);
-  
-      if (jwtValidationErrors.length > 0) {
-        console.log(`Could not verify JWT claims: ${jwtValidationErrors.join(", ")}`)
-        return {
-          status: "403",
-          statusDescription: "Forbidden",
-          body: "Forbidden"
-        };
-      }
+  if (authSignature) {
+    let jwtClaims;
+    try {
+      jwtClaims = jwt.verify(authSignature, config.apiTokenKey);
+    } catch (err) {
+      console.error(err)
+      return {
+        status: "403",
+        statusDescription: "Forbidden",
+        body: "Invalid JWT"
+      };
+    }
+
+    const jwtResult = await validateJwtClaims(jwtClaims, params, config);
+
+    if (!jwtResult.valid) {
+      console.log(`Could not verify JWT claims: ${jwtResult.reason}`);
+      return {
+        status: "403",
+        statusDescription: "Forbidden",
+        body: "Forbidden"
+      };
+    }
   }
-  
+
   const authed = await authorize(
     params,
     referer,
@@ -156,12 +134,9 @@ async function viewerRequestIiif(request, { config }) {
   }
 
   // Set the x-preflight-location request header to the location of the requested item
-  const pairtree = params.id.match(/.{1,2}/g).join("/");
-  const s3Location = params.poster
-    ? `s3://${config.tiffBucket}/posters/${pairtree}-poster.tif`
-    : `s3://${config.tiffBucket}/${pairtree}-pyramid.tif`;
+  const location = s3Location(params, config.tiffBucket);
   request.headers["x-preflight-location"] = [
-    { key: "X-Preflight-Location", value: s3Location }
+    { key: "X-Preflight-Location", value: location }
   ];
   return request;
 }
@@ -226,14 +201,14 @@ function functionNameAndRegion() {
 const { functionName, functionRegion } = functionNameAndRegion();
 console.log("Initializing", functionName, 'in', functionRegion);
 
-module.exports = { 
+module.exports = {
   handler:
     middy(processRequest)
-    .use(
-      secretsManager({
-        fetchData: { config: functionName },
-        awsClientOptions: { region: functionRegion },
-        setToContext: true
-      })
-    )
+      .use(
+        secretsManager({
+          fetchData: { config: functionName },
+          awsClientOptions: { region: functionRegion },
+          setToContext: true
+        })
+      )
 };
