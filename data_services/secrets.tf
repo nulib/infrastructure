@@ -8,15 +8,15 @@ locals {
     }
 
     index = {
-      endpoint = aws_opensearch_domain.elasticsearch.endpoint
-      models   = lookup(local.deploy_model_body, "model_id", "DEPLOY ERROR")
+      endpoint             = aws_opensearch_domain.elasticsearch.endpoint
+      embedding_model      = lookup(local.deploy_model_body, "model_id", "DEPLOY ERROR")
+      embedding_dimensions = var.embedding_dimensions
     }
 
     inference = {
-      endpoints = {
-        name     = var.embedding_model_name
-        endpoint = "https://bedrock-runtime.${data.aws_region.current.name}.amazonaws.com/model/${var.embedding_model_name}/invoke"
-      }
+      name       = var.embedding_model_name
+      endpoint   = "https://bedrock-runtime.${data.aws_region.current.name}.amazonaws.com/model/${var.embedding_model_name}/invoke"
+      dimensions = var.embedding_dimensions
     }
 
     ldap = merge(var.ldap_config, { port = tonumber(var.ldap_config["port"]) })
