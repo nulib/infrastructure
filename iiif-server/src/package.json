@@ -8,6 +8,8 @@
   "dependencies": {
     "@middy/core": "4.6.4",
     "@middy/secrets-manager": "4.6.4",
+    "iiif-processor": "^4.0.7",
+    "jsonwebtoken": "^9.0.2",
     "lodash.isstring": "^4.0.1",
     "node-fetch": "^2.3.0"
   }

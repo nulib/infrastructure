@@ -1,6 +1,9 @@
 const authorize = require("./authorize");
+const validateJwtClaims = require("./validate-jwt");
+const jwt = require("jsonwebtoken");
 const middy = require("@middy/core");
 const secretsManager = require("@middy/secrets-manager");
+
 
 function getEventHeader(request, name) {
   if (
@@ -12,6 +15,14 @@ function getEventHeader(request, name) {
   } else {
     return undefined;
   }
+}
+
+function s3Location(params, bucket) {
+  const pairtree = params.id.match(/.{1,2}/g).join("/");
+
+  return params.poster
+    ? `s3://${bucket}/posters/${pairtree}-poster.tif`
+    : `s3://${bucket}/${pairtree}-pyramid.tif`;
 }
 
 function viewerRequestOptions(request) {
@@ -44,18 +55,32 @@ function parsePath(path) {
     return {
       poster: segments[2] == "posters",
       id: segments[1],
-      filename: segments[0]
+      filename: segments[0],
+      version: segments[6]
     };
   } else {
+    const filename = segments[0].split(".");
     return {
       poster: segments[5] == "posters",
       id: segments[4],
       region: segments[3],
       size: segments[2],
       rotation: segments[1],
-      filename: segments[0]
+      filename: segments[0],
+      quality: filename[0],
+      format: filename[1],
+      version: segments[5]
     };
   }
+}
+
+function getAuthSignature(request) {
+  if (!request.querystring) {
+    return null;
+  }
+
+  const parsedQuery = new URLSearchParams(request.querystring);
+  return parsedQuery.get('Auth-Signature', null)
 }
 
 async function viewerRequestIiif(request, { config }) {
@@ -63,6 +88,33 @@ async function viewerRequestIiif(request, { config }) {
   const params = parsePath(path);
   const referer = getEventHeader(request, "referer");
   const cookie = getEventHeader(request, "cookie");
+  const authSignature = getAuthSignature(request);
+
+  if (authSignature) {
+    let jwtClaims;
+    try {
+      jwtClaims = jwt.verify(authSignature, config.apiTokenKey);
+    } catch (err) {
+      console.error(err)
+      return {
+        status: "403",
+        statusDescription: "Forbidden",
+        body: "Invalid JWT"
+      };
+    }
+
+    const jwtResult = await validateJwtClaims(jwtClaims, params, config);
+
+    if (!jwtResult.valid) {
+      console.log(`Could not verify JWT claims: ${jwtResult.reason}`);
+      return {
+        status: "403",
+        statusDescription: "Forbidden",
+        body: "Forbidden"
+      };
+    }
+  }
+
   const authed = await authorize(
     params,
     referer,
@@ -82,12 +134,9 @@ async function viewerRequestIiif(request, { config }) {
   }
 
   // Set the x-preflight-location request header to the location of the requested item
-  const pairtree = params.id.match(/.{1,2}/g).join("/");
-  const s3Location = params.poster
-    ? `s3://${config.tiffBucket}/posters/${pairtree}-poster.tif`
-    : `s3://${config.tiffBucket}/${pairtree}-pyramid.tif`;
+  const location = s3Location(params, config.tiffBucket);
   request.headers["x-preflight-location"] = [
-    { key: "X-Preflight-Location", value: s3Location }
+    { key: "X-Preflight-Location", value: location }
   ];
   return request;
 }
@@ -152,14 +201,14 @@ function functionNameAndRegion() {
 const { functionName, functionRegion } = functionNameAndRegion();
 console.log("Initializing", functionName, 'in', functionRegion);
 
-module.exports = { 
+module.exports = {
   handler:
     middy(processRequest)
-    .use(
-      secretsManager({
-        fetchData: { config: functionName },
-        awsClientOptions: { region: functionRegion },
-        setToContext: true
-      })
-    )
+      .use(
+        secretsManager({
+          fetchData: { config: functionName },
+          awsClientOptions: { region: functionRegion },
+          setToContext: true
+        })
+      )
 };

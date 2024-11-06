@@ -14,6 +14,8 @@ Parameters:
   AllowFromReferers:
     Type: String
     Default: ""
+  ApiTokenKey:
+    Type: String
   CertificateArn:
     Type: String
   DcApiEndpoint:
@@ -70,6 +72,17 @@ Resources:
                 - lambda.amazonaws.com
             Action:
               - 'sts:AssumeRole'
+      Policies:
+        Version: 2012-10-17
+        Statement:
+          - Sid: PyramidBucketAccess
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetObject
+            Resource: 
+              - !Sub "arn:aws:s3:::${SourceBucket}"
+              - !Sub "arn:aws:s3:::${SourceBucket}/*"
   ViewerRequestSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
@@ -79,6 +92,7 @@ Resources:
           allowFrom: !Ref AllowFromReferers
           dcApiEndpoint: !Ref DcApiEndpoint
           tiffBucket: !Ref SourceBucket
+          apiTokenKey: !Ref ApiTokenKey
   ViewerRequestSecretAccess:
     Type: AWS::SecretsManager::ResourcePolicy
     Properties: 
@@ -97,7 +111,7 @@ Resources:
   ConfigurationSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub "${Namespace}/iiif-url"
+      Name: !Sub "${Namespace}/infrastructure/iiif"
       SecretString:
         Fn::ToJsonString:
           base: !Sub "https://${Hostname}.${DomainName}/"
