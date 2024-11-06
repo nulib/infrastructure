@@ -1,6 +1,6 @@
 variable "postgres_version" {
   type    = string
-  default = "13.13"
+  default = "13.15"
 }
 
 variable "instance_class" {

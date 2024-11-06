@@ -19,7 +19,7 @@ locals {
       }
     }
 
-    ldap = var.ldap_config
+    ldap = merge(var.ldap_config, { port = tonumber(var.ldap_config["port"]) })
   }
 }
 
