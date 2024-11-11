@@ -8,7 +8,7 @@ locals {
     }
 
     index = {
-      endpoint             = aws_opensearch_domain.elasticsearch.endpoint
+      endpoint             = "https://${aws_opensearch_domain.elasticsearch.endpoint}"
       embedding_model      = lookup(local.deploy_model_body, "model_id", "DEPLOY ERROR")
       embedding_dimensions = var.embedding_dimensions
     }
