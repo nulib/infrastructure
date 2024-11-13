@@ -59,7 +59,7 @@ Resources:
       Handler: index.handler
       Architectures:
         - x86_64
-      Timeout: 3
+      Timeout: 5
       MemorySize: 128
       AutoPublishAlias: "Latest"
       AssumeRolePolicyDocument:
