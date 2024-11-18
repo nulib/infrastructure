@@ -90,6 +90,7 @@ async function viewerRequestIiif(request, { config }) {
   const cookie = getEventHeader(request, "cookie");
   const authSignature = getAuthSignature(request);
 
+  let jwtAuth = false;
   if (authSignature) {
     let jwtClaims;
     try {
@@ -105,7 +106,10 @@ async function viewerRequestIiif(request, { config }) {
 
     const jwtResult = await validateJwtClaims(jwtClaims, params, config);
 
-    if (!jwtResult.valid) {
+    if (jwtResult.valid) {
+      console.log("JWT claims verified");
+      jwtAuth = true;
+    } else {
       console.log(`Could not verify JWT claims: ${jwtResult.reason}`);
       return {
         status: "403",
@@ -115,7 +119,7 @@ async function viewerRequestIiif(request, { config }) {
     }
   }
 
-  const authed = await authorize(
+  const authed = jwtAuth || await authorize(
     params,
     referer,
     cookie,
