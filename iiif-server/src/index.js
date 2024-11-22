@@ -1,9 +1,8 @@
-const authorize = require("./authorize");
-const validateJwtClaims = require("./validate-jwt");
-const jwt = require("jsonwebtoken");
-const middy = require("@middy/core");
-const secretsManager = require("@middy/secrets-manager");
-
+import { authorize } from './authorize.js';
+import { validateJwtClaims } from "./validate-jwt.js";
+import jwt from "jsonwebtoken";
+import middy from "@middy/core";
+import secretsManager from "@middy/secrets-manager";
 
 function getEventHeader(request, name) {
   if (
@@ -176,6 +175,7 @@ async function processViewerRequest(event, context) {
 // }
 
 async function processRequest(event, context) {
+  console.log(context);
   const { eventType } = event.Records[0].cf.config;
   let result;
 
@@ -205,14 +205,12 @@ function functionNameAndRegion() {
 const { functionName, functionRegion } = functionNameAndRegion();
 console.log("Initializing", functionName, 'in', functionRegion);
 
-module.exports = {
-  handler:
-    middy(processRequest)
-      .use(
-        secretsManager({
-          fetchData: { config: functionName },
-          awsClientOptions: { region: functionRegion },
-          setToContext: true
-        })
-      )
-};
+export const handler = 
+  middy(processRequest)
+    .use(
+      secretsManager({
+        fetchData: { config: functionName },
+        awsClientOptions: { region: functionRegion },
+        setToContext: true
+      })
+    );

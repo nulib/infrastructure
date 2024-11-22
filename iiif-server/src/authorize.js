@@ -1,5 +1,5 @@
-const isString = require("lodash.isstring");
-const fetch = require("node-fetch");
+import isString from "lodash.isstring";
+import fetch from "node-fetch";
 
 let allowFrom, dcApiEndpoint;
 function reconfigure(config) {
@@ -28,7 +28,7 @@ function isBlurred({ region, size }) {
   return false;
 }
 
-async function authorize(params, referer, cookie, clientIp, config) {
+export async function authorize(params, referer, cookie, clientIp, config) {
   reconfigure(config);
   const allowedFrom = allowedFromRegexes(allowFrom);
 
@@ -58,5 +58,3 @@ async function getImageAuthorization(id, cookieHeader, clientIp) {
   );
   return response.status == 204;
 }
-
-module.exports = authorize;

@@ -1,7 +1,7 @@
-const { S3Client, HeadObjectCommand } = require("@aws-sdk/client-s3");
-const IIIF = require('iiif-processor');
+import { S3Client, HeadObjectCommand } from "@aws-sdk/client-s3";
+import IIIF from 'iiif-processor';
 
-async function validateJwtClaims(jwtClaims, params, config) {
+export async function validateJwtClaims(jwtClaims, params, config) {
   console.log("Validating JWT claims");
   const currentTime = Math.floor(Date.now() / 1000);
 
@@ -82,5 +82,3 @@ function s3Key(params) {
     ? `posters/${pairtree}-poster.tif`
     : `${pairtree}-pyramid.tif`;
 }
-
-module.exports = validateJwtClaims
