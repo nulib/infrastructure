@@ -7,6 +7,11 @@ locals {
       password = random_string.db_master_password.result
     }
 
+    cache = {
+      address   = aws_route53_record.redis.name
+      port      = 6379
+    }
+
     index = {
       endpoint             = "https://${aws_opensearch_domain.elasticsearch.endpoint}"
       embedding_model      = lookup(local.deploy_model_body, "model_id", "DEPLOY ERROR")
