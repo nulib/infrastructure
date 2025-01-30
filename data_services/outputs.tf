@@ -35,6 +35,17 @@ output "search_snapshot_configuration" {
   }
 }
 
+output "aurora" {
+  sensitive = true
+  value = {
+    cluster_name    = module.aurora_postgresql.cluster_id
+    endpoint        = module.aurora_postgresql.cluster_endpoint
+    port            = module.aurora_postgresql.cluster_port
+    admin_user      = module.aurora_postgresql.cluster_master_username
+    admin_password  = module.aurora_postgresql.cluster_master_password
+  }
+}
+
 output "postgres" {
   value = {
     address               = aws_db_instance.db.address

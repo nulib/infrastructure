@@ -1,5 +1,12 @@
 locals {
   secrets = {
+    aurora = {
+      host        = module.aurora_postgresql.cluster_endpoint
+      port        = module.aurora_postgresql.cluster_port
+      username    = module.aurora_postgresql.cluster_master_username
+      password    = module.aurora_postgresql.cluster_master_password
+    }
+
     db = {
       host     = aws_db_instance.db.address
       port     = aws_db_instance.db.port

@@ -1,3 +1,18 @@
+variable "aurora_engine_version" {
+  type    = string
+  default = "16.1"
+}
+
+variable "aurora_min_capacity" {
+  type    = number
+  default = 0.5
+}
+
+variable "aurora_max_capacity" {
+  type    = number
+  default = 8
+}
+
 variable "postgres_version" {
   type    = string
   default = "13.15"
