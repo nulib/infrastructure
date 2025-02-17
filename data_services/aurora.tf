@@ -2,23 +2,24 @@ module "aurora_postgresql" {
   source  = "terraform-aws-modules/rds-aurora/aws"
   version = "~> 7.7"
 
-  name                          = "${module.core.outputs.stack.namespace}-aurora-db-cluster"
-  engine                        = "aurora-postgresql"
-  engine_version                = var.aurora_engine_version
-  engine_mode                   = "provisioned"
-  vpc_id                        = module.core.outputs.vpc.id
-  subnets                       = module.core.outputs.vpc.private_subnets.ids
-  allowed_cidr_blocks           = [module.core.outputs.vpc.cidr_block, "10.0.0.0/16"]
-  allow_major_version_upgrade   = true
-  apply_immediately             = true
-  create_db_parameter_group     = false
-  create_security_group         = true
-  enable_http_endpoint          = true
-  preferred_backup_window       = "03:00-06:00"
-  preferred_maintenance_window  = "Mon:00:00-Mon:03:00"
+  name                                = "${module.core.outputs.stack.namespace}-aurora-db-cluster"
+  engine                              = "aurora-postgresql"
+  engine_version                      = var.aurora_engine_version
+  engine_mode                         = "provisioned"
+  vpc_id                              = module.core.outputs.vpc.id
+  subnets                             = module.core.outputs.vpc.private_subnets.ids
+  allowed_cidr_blocks                 = [module.core.outputs.vpc.cidr_block, "10.0.0.0/16"]
+  allow_major_version_upgrade         = true
+  apply_immediately                   = true
+  create_db_cluster_parameter_group   = true
+  create_db_parameter_group           = true
+  create_security_group               = true
+  enable_http_endpoint                = true
+  preferred_backup_window             = "03:00-06:00"
+  preferred_maintenance_window        = "Mon:00:00-Mon:03:00"
 
-  master_username               = "postgres"
-  create_random_password        = true
+  master_username                     = "postgres"
+  create_random_password              = true
 
   tags                          = local.tags
 
@@ -32,8 +33,22 @@ module "aurora_postgresql" {
     one = {}
   }
 
+  db_cluster_parameter_group_family     = "aurora-postgresql16"
+  db_cluster_parameter_group_parameters = [
+    {
+      name            = "rds.logical_replication"
+      value           = 1
+      apply_method    = "pending-reboot"
+    },
+  ]
+
   db_parameter_group_family     = "aurora-postgresql16"
-  db_parameter_group_parameters = [ 
+  db_parameter_group_parameters = [
+    {
+      name            = "max_locks_per_transaction"
+      value           = 1024
+      apply_method    = "pending-reboot"
+    }
   ]
 
   performance_insights_enabled          = true
