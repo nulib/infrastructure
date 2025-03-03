@@ -41,6 +41,11 @@ variable "nul_staff_ips" {
   default = []
 }
 
+variable "rate_limited_country_codes" {
+  type    = list(string)
+  default = []
+}
+
 variable "resources" {
   type    = map
   default = {}

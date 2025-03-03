@@ -234,8 +234,62 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   }
 
   rule {
-    name     = "${local.namespace}-aws-managed-ip-reputation-list"
+    name     = "${local.namespace}-geotag-rate-limited-countries"
     priority = 6
+
+    action {
+      count {}
+    }
+
+    statement {
+      geo_match_statement {
+        country_codes = var.rate_limited_country_codes
+      }
+    }
+
+    rule_label {
+      name = "nul:rate-limit:country"
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-rate-limited-countries"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "${local.namespace}-rate-limit-tagged-requests"
+    priority = 7
+
+    action {
+      captcha {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit                 = 2500
+        evaluation_window_sec = 300
+        aggregate_key_type    = "CUSTOM_KEYS"
+
+        custom_key {
+          label_namespace {
+            namespace = "nul:rate-limit:"
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-rate-limited-tagged"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "${local.namespace}-aws-managed-ip-reputation-list"
+    priority = 8
 
     override_action {
       none {}
@@ -257,7 +311,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-bot-control"
-    priority = 7
+    priority = 9
 
     override_action {
       none {}
@@ -291,7 +345,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-high-traffic-ips"
-    priority = 8
+    priority = 10
 
     action {
       block {}
@@ -312,7 +366,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-high-traffic-ips-aug2024"
-    priority = 9
+    priority = 11
 
     action {
       block {}
@@ -334,7 +388,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   # Challenge browsers that exceed the rate limit
   rule {
     name     = "${local.namespace}-browser-rate-limiter"
-    priority = 10
+    priority = 12
 
     action {
       challenge {}
@@ -368,7 +422,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-non-browser-user-agent-block"
-    priority = 11
+    priority = 13
 
     action {
       block {}
@@ -405,7 +459,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   # Rate limit (HTTP status 429) HTTP client libraries that exceed the rate limit
   rule {
     name     = "${local.namespace}-http-client-rate-limiter"
-    priority = 12
+    priority = 14
 
     action {
       block {
@@ -450,7 +504,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-common"
-    priority = 13
+    priority = 15
 
     override_action {
       none {}
@@ -484,7 +538,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-known-bad-inputs"
-    priority = 14
+    priority = 16
 
     override_action {
       none {}
