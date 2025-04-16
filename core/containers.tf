@@ -1,5 +1,62 @@
 locals {
   repositories = toset(["arch", "avr", "fcrepo4", "meadow", "solr", "zookeeper"])
+  default_lifecycle_rule = {
+    rulePriority    = 1
+    description     = "Expire untagged images after 7 days"
+    selection = {
+      tagStatus     = "untagged"
+      countType     = "sinceImagePushed"
+      countUnit     = "days"
+      countNumber   = 7
+    }
+    action = {
+      type          = "expire"
+    }
+  }
+  lifecycle_rules = {
+    meadow = [
+      local.default_lifecycle_rule,
+      {
+        rulePriority        = 2
+        description         = "Retain 3 latest v9.x.x main application images"
+        selection = {
+          tagStatus         = "tagged"
+          tagPatternList    = ["9.*.*"]
+          countType         = "imageCountMoreThan"
+          countNumber       = 3
+        },
+        action = {
+          type              = "expire"
+        }
+      },
+      {
+        rulePriority        = 3
+        description         = "Retain 3 latest v10+ main application images"
+        selection = {
+          tagStatus         = "tagged"
+          tagPatternList    = ["1*.*.*"]
+          countType         = "imageCountMoreThan"
+          countNumber       = 3
+        },
+        action = {
+          type              = "expire"
+        }
+      },
+      {
+        rulePriority        = 4
+        description         = "Retain 3 latest livebook support images"
+        selection = {
+          tagStatus         = "tagged"
+          tagPatternList    = ["livebook-*.*.*"]
+          countType         = "imageCountMoreThan"
+          countNumber       = 3
+        },
+        action = {
+          type              = "expire"
+        }
+      }
+    ]
+  }
 }
 
 resource "aws_ecr_repository" "nulib_images" {
@@ -13,21 +70,7 @@ resource "aws_ecr_lifecycle_policy" "nulib_image_expiration" {
   repository  = aws_ecr_repository.nulib_images[each.key].name
 
   policy = jsonencode({
-    rules = [
-      {
-        rulePriority = 1
-        description  = "Expire untagged images after 7 days"
-        selection = {
-          tagStatus   = "untagged"
-          countType   = "sinceImagePushed"
-          countUnit   = "days"
-          countNumber = 7
-        }
-        action = {
-          type        = "expire"
-        }
-      }
-    ]
+    rules = lookup(local.lifecycle_rules, each.key, [local.default_lifecycle_rule])
   })
 }
 

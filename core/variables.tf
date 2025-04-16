@@ -32,6 +32,11 @@ variable "environment" {
   default = ""
 }
 
+variable "oidc_github_repositories" {
+  type    = list(string)
+  default = ["dc-api-v2"]
+}
+
 variable "public_subnets" {
   type    = list(string)
   default = ["10.1.2.0/24", "10.1.4.0/24", "10.1.6.0/24"]
