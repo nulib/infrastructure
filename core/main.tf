@@ -19,6 +19,7 @@ locals {
   environment   = coalesce(var.environment, substr(terraform.workspace, 0, 1))
   namespace     = join("-", [var.stack_name, local.environment])
   common_tags   = {
+    Department  = "DPDC"
     Environment = terraform.workspace
     Terraform   = "true"
   }
