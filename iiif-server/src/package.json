@@ -11,7 +11,7 @@
     "@aws-sdk/client-secrets-manager": "^3.699.0",
     "@middy/core": "^5.0",
     "@middy/secrets-manager": "^5.0",
-    "iiif-processor": "^4.0.7",
+    "iiif-processor": "^6.1.2",
     "jsonwebtoken": "^9.0.2",
     "lodash.isstring": "^4.0.1",
     "node-fetch": "^2.3.0"
