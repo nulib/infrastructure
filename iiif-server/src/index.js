@@ -109,7 +109,7 @@ async function viewerRequestIiif(request, { config }) {
       console.log("JWT claims verified");
       jwtAuth = true;
     } else {
-      console.log(`Could not verify JWT claims: ${jwtResult.reason}`);
+      console.warn(`Could not verify JWT claims: ${jwtResult.reason}`);
       return {
         status: "403",
         statusDescription: "Forbidden",
@@ -159,23 +159,7 @@ async function processViewerRequest(event, context) {
   return result;
 }
 
-// async function logSecret() {
-//   const {
-//     SecretsManagerClient,
-//     GetSecretValueCommand
-//   } = require("@aws-sdk/client-secrets-manager");
-//   const client = new SecretsManagerClient();
-//   const result = await client.send(
-//     new GetSecretValueCommand({
-//       SecretId: process.env.AWS_LAMBDA_FUNCTION_NAME
-//     })
-//   );
-//   console.log("raw", result.SecretString);
-//   console.log("parsed", JSON.parse(result.SecretString));
-// }
-
 async function processRequest(event, context) {
-  console.log(context);
   const { eventType } = event.Records[0].cf.config;
   let result;
 

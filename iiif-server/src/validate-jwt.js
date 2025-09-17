@@ -1,5 +1,5 @@
 import { S3Client, HeadObjectCommand } from "@aws-sdk/client-s3";
-import IIIF from 'iiif-processor';
+import Calculator from 'iiif-processor/calculator';
 
 export async function validateJwtClaims(jwtClaims, params, config) {
   console.log("Validating JWT claims");
@@ -24,8 +24,7 @@ export async function validateJwtClaims(jwtClaims, params, config) {
     const dimensions = await s3Dimensions(config.tiffBucket, s3Key(params));
 
     if (dimensions) {
-      const Calculator = IIIF.Versions[params.version].Calculator;
-      const calculator = new Calculator(dimensions);
+      const calculator = new Calculator[params.version](dimensions);
 
       calculator
         .region(params.region)
@@ -65,12 +64,12 @@ async function s3Dimensions(bucket, key) {
         height: parseInt(Metadata.height, 10)
       };
     } else {
-      console.log("Missing width and height metadata in S3 object");
+      console.warn("Missing width and height metadata in S3 object");
       return null;
     }
   } catch (err) {
-    console.log("Error fetching S3 object metadata");
-    console.log(err);
+    console.error("Error fetching S3 object metadata");
+    console.error(err);
     return null;
   }
 }
