@@ -65,8 +65,47 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   }
 
   rule {
+    name     = "${local.namespace}-require-host-header"
+    priority = 5
+
+    action {
+      block {
+        custom_response {
+          response_code            = 400
+        }
+      }
+    }
+
+    statement {
+      not_statement {
+        statement {
+          regex_match_statement {
+            regex_string = "^[a-z].+\\.northwestern\\.edu$"
+            field_to_match {
+              single_header {
+                name = "host"
+              }
+            }
+            text_transformation {
+              priority = 0
+              type     = "LOWERCASE"
+            }
+          
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-require-host-header"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
     name     = "${local.namespace}-allow-nul-staff-ips"
-    priority = 1
+    priority = 10
 
     action {
       allow {}
@@ -87,7 +126,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-block-meadow-access"
-    priority = 2
+    priority = 20
 
     action {
       block {
@@ -99,39 +138,17 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     }
 
     statement {
-      or_statement {
-        statement {
-          size_constraint_statement {
-            field_to_match {
-              single_header {
-                name = "host"
-              }
-            }
-
-            comparison_operator = "EQ"
-            size                = 0
-
-            text_transformation {
-              priority = 0
-              type     = "NONE"
-            }
+      byte_match_statement {
+        positional_constraint = "STARTS_WITH"
+        search_string         = "meadow."
+        field_to_match {
+          single_header {
+            name = "host"
           }
         }
-
-        statement {
-          byte_match_statement {
-            positional_constraint = "STARTS_WITH"
-            search_string         = "meadow."
-            field_to_match {
-              single_header {
-                name = "host"
-              }
-            }
-            text_transformation {
-              priority = 0
-              type     = "LOWERCASE"
-            }
-          }
+        text_transformation {
+          priority = 0
+          type     = "LOWERCASE"
         }
       }
     }
@@ -145,7 +162,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-allow-nul-ips"
-    priority = 3
+    priority = 30
 
     rule_label {
       name = "nul:internal-ip:v4"
@@ -171,7 +188,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-${local.namespace}-allow-nul-ips-v6"
-    priority = 4
+    priority = 40
 
     rule_label {
       name = "nul:internal-ip:v6"
@@ -196,7 +213,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-allowed-user-agents"
-    priority = 5
+    priority = 50
 
     action {
       allow {}
@@ -235,7 +252,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-geotag-rate-limited-countries"
-    priority = 6
+    priority = 60
 
     action {
       count {}
@@ -260,7 +277,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-rate-limit-tagged-requests"
-    priority = 7
+    priority = 70
 
     action {
       captcha {}
@@ -289,7 +306,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-ip-reputation-list"
-    priority = 8
+    priority = 80
 
     override_action {
       none {}
@@ -311,7 +328,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-bot-control"
-    priority = 9
+    priority = 90
 
     override_action {
       none {}
@@ -345,7 +362,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-high-traffic-ips"
-    priority = 10
+    priority = 100
 
     action {
       block {}
@@ -366,7 +383,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-high-traffic-ips-aug2024"
-    priority = 11
+    priority = 110
 
     action {
       block {}
@@ -388,7 +405,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   # Challenge browsers that exceed the rate limit
   rule {
     name     = "${local.namespace}-browser-rate-limiter"
-    priority = 12
+    priority = 120
 
     action {
       challenge {}
@@ -422,7 +439,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-non-browser-user-agent-block"
-    priority = 13
+    priority = 130
 
     action {
       block {}
@@ -459,7 +476,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   # Rate limit (HTTP status 429) HTTP client libraries that exceed the rate limit
   rule {
     name     = "${local.namespace}-http-client-rate-limiter"
-    priority = 14
+    priority = 140
 
     action {
       block {
@@ -504,7 +521,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-common"
-    priority = 15
+    priority = 150
 
     override_action {
       none {}
@@ -538,7 +555,7 @@ resource "aws_wafv2_web_acl" "security_firewall" {
 
   rule {
     name     = "${local.namespace}-aws-managed-known-bad-inputs"
-    priority = 16
+    priority = 160
 
     override_action {
       none {}
