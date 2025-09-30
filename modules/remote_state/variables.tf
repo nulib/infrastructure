@@ -1,3 +1,8 @@
+variable "environment" {
+  type    = string
+  default = ""
+}
+
 variable "component" {
   type    = string
 }
