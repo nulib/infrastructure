@@ -170,7 +170,7 @@ Resources:
         DefaultTTL: 86400
         MaxTTL: 31536000
         MinTTL: 1
-        Name: CachingOptimizedWithVariableOrigin
+        Name: !Sub "${AWS::StackName}-CachingOptimizedWithVariableOrigin"
         ParametersInCacheKeyAndForwardedToOrigin:
           CookiesConfig: 
             CookieBehavior: none
