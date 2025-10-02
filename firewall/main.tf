@@ -30,3 +30,23 @@ locals {
     }
   )
 }
+
+resource "random_bytes" "security_header_value" {
+  length = 16
+}
+
+resource "aws_secretsmanager_secret" "firewall_secret" {
+  name        = "${terraform.workspace}/infrastructure/firewall"
+  description = "Secret value for the x-nul-passkey header to access staging and production applications"
+  tags        = local.tags
+}
+
+resource "aws_secretsmanager_secret_version" "firewall_secret_version" {
+  secret_id     = aws_secretsmanager_secret.firewall_secret.id
+  secret_string = jsonencode({
+    security_header = {
+      name  = "x-nul-${terraform.workspace}-passkey"
+      value = random_bytes.security_header_value.hex
+    }
+  })
+}

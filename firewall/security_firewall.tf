@@ -65,6 +65,39 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   }
 
   rule {
+    name     = "${local.namespace}-allow-security-header"
+    priority = 3
+
+    action {
+      allow {}
+    }
+
+    statement {
+      byte_match_statement {
+        field_to_match {
+          single_header {
+            name = "x-nul-${terraform.workspace}-passkey"
+          }
+        }
+
+        positional_constraint = "EXACTLY"
+        search_string         = random_bytes.security_header_value.hex
+
+        text_transformation {
+          priority = 0
+          type     = "NONE"
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-allow-security-header"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
     name     = "${local.namespace}-require-host-header"
     priority = 5
 

@@ -10,8 +10,71 @@ resource "aws_wafv2_web_acl" "ip_firewall" {
   }
 
   rule {
+    name     = "${local.namespace}-allow-honeybadger"
+    priority = 0
+
+    action {
+      allow {}
+    }
+
+    statement {
+      regex_match_statement {
+        regex_string = join("|", var.honeybadger_tokens)
+        field_to_match {
+          single_header {
+            name = "honeybadger-token"
+          }
+        }
+        text_transformation {
+          priority = 0
+          type     = "NONE"
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-allow-honeybadger"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "${local.namespace}-allow-security-header"
+    priority = 3
+
+    action {
+      allow {}
+    }
+
+    statement {
+      byte_match_statement {
+        field_to_match {
+          single_header {
+            name = "x-nul-${terraform.workspace}-passkey"
+          }
+        }
+
+        positional_constraint = "EXACTLY"
+        search_string         = random_bytes.security_header_value.hex
+
+        text_transformation {
+          priority = 0
+          type     = "NONE"
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-allow-security-header"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
     name     = "allow-nul-ips"
-    priority = 1
+    priority = 10
 
     action {
       allow {}
@@ -32,7 +95,7 @@ resource "aws_wafv2_web_acl" "ip_firewall" {
 
   rule {
     name     = "allow-nul-ips-v6"
-    priority = 2
+    priority = 20
 
     action {
       allow {}
