@@ -21,9 +21,9 @@ def handler(event, _context):
 
         if database:
             ensure_database(conn, database, username)
+        conn.run(f"REVOKE {quote_ident(username)} FROM CURRENT_USER")
 
     log("User management complete", {"username": username, "database": database})
-    conn.run(f"REVOKE {quote_ident(username)} FROM {quote_ident(connection_params().get('user'))}")
     return {"username": username, "database": database}
 
 
@@ -44,7 +44,7 @@ def ensure_role(conn: Connection, username: str, password: str) -> None:
             f"CREATE ROLE {quote_ident(username)} WITH LOGIN PASSWORD {escaped_password}"
         )
 
-    conn.run(f"GRANT {quote_ident(username)} TO {quote_ident(connection_params().get('user'))}")
+    conn.run(f"GRANT {quote_ident(username)} TO CURRENT_USER")
     conn.run(f"ALTER ROLE {quote_ident(username)} WITH CREATEDB")
 
 
