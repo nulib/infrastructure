@@ -10,7 +10,7 @@ locals {
     }
 
     parameters = {
-      region       = data.aws_region.current.name
+      region       = data.aws_region.current.region
       service_name = "bedrock"
       model_name   = var.embedding_model_name
     }

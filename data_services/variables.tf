@@ -1,6 +1,6 @@
 variable "aurora_engine_version" {
   type    = string
-  default = "16.1"
+  default = "16.6"
 }
 
 variable "aurora_min_capacity" {

@@ -16,7 +16,7 @@ output "elasticsearch" {
 output "inference" {
   value = {
     endpoint_name       = var.embedding_model_name
-    invocation_url      = "https://bedrock-runtime.${data.aws_region.current.name}.amazonaws.com/model/${var.embedding_model_name}/invoke"
+    invocation_url      = "https://bedrock-runtime.${data.aws_region.current.region}.amazonaws.com/model/${var.embedding_model_name}/invoke"
     opensearch_model_id = lookup(local.deploy_model_body, "model_id", "DEPLOY ERROR")
   }
 }
@@ -28,7 +28,7 @@ output "search_snapshot_configuration" {
       type = "s3"
       settings = {
         bucket   = aws_s3_bucket.elasticsearch_snapshot_bucket.id
-        region   = data.aws_region.current.name
+        region   = data.aws_region.current.region
         role_arn = aws_iam_role.elasticsearch_snapshot_bucket_access.arn
       }
     })
@@ -43,6 +43,7 @@ output "aurora" {
     port            = module.aurora_postgresql.cluster_port
     admin_user      = module.aurora_postgresql.cluster_master_username
     admin_password  = module.aurora_postgresql.cluster_master_password
+    user_lambda     = module.user_lambda.lambda_function_arn
   }
 }
 

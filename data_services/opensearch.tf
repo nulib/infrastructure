@@ -32,13 +32,13 @@ resource "aws_opensearch_domain" "elasticsearch" {
   }
 
   log_publishing_options {
-    cloudwatch_log_group_arn    = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current_user.account_id}:log-group:/aws/OpenSearchService/domains/${local.namespace}-index/application-logs"
+    cloudwatch_log_group_arn    = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current_user.account_id}:log-group:/aws/OpenSearchService/domains/${local.namespace}-index/application-logs"
     enabled                     = true
     log_type                    = "ES_APPLICATION_LOGS"
   }
 
   cluster_config {
-    instance_type             = "m6g.large.search"
+    instance_type             = "m7g.large.search"
     instance_count            = var.opensearch_cluster_nodes
     zone_awareness_enabled    = true
     zone_awareness_config {
@@ -53,7 +53,7 @@ resource "aws_opensearch_domain" "elasticsearch" {
 
 
   lifecycle {
-    ignore_changes = []
+    ignore_changes = [engine_version]
   }
 }
 
@@ -73,7 +73,7 @@ data "aws_iam_policy_document" "elasticsearch_http_access" {
       type        = "AWS"
       identifiers = ["arn:aws:iam::${data.aws_caller_identity.current_user.account_id}:root"]
     }
-    resources = ["arn:aws:es:${data.aws_region.current.name}:${data.aws_caller_identity.current_user.account_id}:domain/${local.namespace}-index/*"]
+    resources = ["arn:aws:es:${data.aws_region.current.region}:${data.aws_caller_identity.current_user.account_id}:domain/${local.namespace}-index/*"]
   }
 }
 

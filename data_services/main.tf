@@ -4,7 +4,7 @@ terraform {
   }
 
   required_providers {
-    aws    = "~> 5.1"
+    aws    = "~> 6.0"
     random = ">= 3.4.0"
   }
   required_version = ">= 1.3.0"
@@ -36,3 +36,4 @@ module "core" {
 
 data "aws_region" "current" {}
 
+data "aws_caller_identity" "current" {}

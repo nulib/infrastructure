@@ -94,7 +94,7 @@ resource "aws_db_instance" "db" {
   tags                      = local.tags
 
   lifecycle {
-    ignore_changes = [ maintenance_window ]
+    ignore_changes = [ engine_version, maintenance_window ]
   }
 }
 
@@ -105,7 +105,7 @@ module "maintenance_lambda" {
   function_name          = "${local.namespace}-db-maintenance"
   description            = "Cleans and vacuums certain database tables"
   handler                = "main.handler"
-  runtime                = "python3.10"
+  runtime                = "python3.12"
   source_path            = "${path.module}/db_maintenance"
   timeout                = 600
   publish                = true

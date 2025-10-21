@@ -13,3 +13,4 @@ package.yml
 # Local Build
 node_modules
 data_services/model/.working
+__pycache__
