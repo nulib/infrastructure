@@ -4,6 +4,17 @@ import jwt from "jsonwebtoken";
 import middy from "@middy/core";
 import secretsManager from "@middy/secrets-manager";
 
+function selectHeaders(request, names) {
+  const selected = {};
+  for (const header in request.headers) {
+    console.log("Header:", header, request.headers[header]);
+    if (request.headers[header].length > 0 && names.includes(header)) {
+      selected[header] = request.headers[header][0].value;
+    }
+  }
+  return selected;
+}
+
 function getEventHeader(request, name) {
   if (
     request.headers &&
@@ -86,7 +97,7 @@ async function viewerRequestIiif(request, { config }) {
   const path = decodeURI(request.uri.replace(/%2f/gi, ""));
   const params = parsePath(path);
   const referer = getEventHeader(request, "referer");
-  const cookie = getEventHeader(request, "cookie");
+  const passthroughHeaders = selectHeaders(request, ["authorization", "cookie"]);
   const authSignature = getAuthSignature(request);
 
   let jwtAuth = false;
@@ -121,7 +132,7 @@ async function viewerRequestIiif(request, { config }) {
   const authed = jwtAuth || await authorize(
     params,
     referer,
-    cookie,
+    passthroughHeaders,
     request.clientIp,
     config
   );

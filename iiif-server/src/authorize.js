@@ -28,7 +28,7 @@ function isBlurred({ region, size }) {
   return false;
 }
 
-export async function authorize(params, referer, cookie, clientIp, config) {
+export async function authorize(params, referer, headers, clientIp, config) {
   reconfigure(config);
   const allowedFrom = allowedFromRegexes(allowFrom);
 
@@ -41,14 +41,12 @@ export async function authorize(params, referer, cookie, clientIp, config) {
 
   const id = params.id.split("/").slice(-1)[0];
 
-  return await getImageAuthorization(id, cookie, clientIp);
+  return await getImageAuthorization(id, headers, clientIp);
 }
 
-async function getImageAuthorization(id, cookieHeader, clientIp) {
+async function getImageAuthorization(id, headers, clientIp) {
   const opts = {
-    headers: {
-      cookie: cookieHeader,
-    },
+    headers,
   };
   if (clientIp) opts.headers["x-client-ip"] = clientIp;
 
