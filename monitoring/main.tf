@@ -4,12 +4,16 @@ terraform {
   }
 
   required_providers {
-    aws = "~> 4.0"
+    aws    = "~> 6.0"
   }
   required_version = ">= 1.3.0"
 }
 
-provider "aws" { }
+provider "aws" {
+  default_tags {
+    tags = local.tags
+  }
+}
 
 module "core" {
   source = "../modules/remote_state"
@@ -58,8 +62,6 @@ resource "aws_cloudwatch_metric_alarm" "load_balancer_5xx" {
   dimensions = {
     LoadBalancer = data.aws_lb.load_balancer[each.key].arn_suffix
   }
-
-  tags = local.tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
@@ -80,8 +82,6 @@ resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
     ClusterName = each.value.cluster
     ServiceName = each.value.service
   }
-
-  tags = local.tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "memory_utilization" {
@@ -102,8 +102,6 @@ resource "aws_cloudwatch_metric_alarm" "memory_utilization" {
     ClusterName = each.value.cluster
     ServiceName = each.value.service
   }
-
-  tags = local.tags
 }
 
 data "aws_route53_zone" "status_zone" {
