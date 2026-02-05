@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform:
+  - AWS::Serverless-2016-10-31
+  - AWS::LanguageExtensions
+Description: Fixity State Machine and Lambda function
+Resources:
+  executeFixity:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Run the fixity step function
+      CodeUri: ./execute-fixity
+      Handler: index.handler
+      Runtime: nodejs22.x
+      MemorySize: 256
+      Timeout: 60
+      Policies:
+      - Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "states:StartExecution"
+            Resource: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${sm.Outputs.StateMachineName}"
+      Environment:
+        Variables:
+          stateMachineArn: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${sm.Outputs.StateMachineName}"
+  executeFixityPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref executeFixity
+      Principal: s3.amazonaws.com
+  sm:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: "https://awsi-megs-guidances-us-east-1.s3.amazonaws.com/serverless-fixity-for-digital-preservation-compliance/latest/serverless-fixity-for-digital-preservation-compliance.template"
+      Parameters:
+        Email: fixity-blackhole@mailinator.com
+        VendorAccountRoleList: ""
+Outputs:
+  executeFixityFunctionName:
+    Description: "The name of the execute fixity Lambda function"
+    Value: !Ref executeFixity
+  executeFixityFunctionArn:
+    Description: "The ARN of the execute fixity Lambda function"
+    Value: !GetAtt executeFixity.Arn
