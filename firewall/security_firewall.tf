@@ -523,8 +523,8 @@ resource "aws_wafv2_web_acl" "security_firewall" {
     statement {
       rate_based_statement {
         aggregate_key_type    = "IP"
-        limit                 = 500
-        evaluation_window_sec = 300
+        limit                 = 100
+        evaluation_window_sec = 600
 
         scope_down_statement {
           and_statement {
