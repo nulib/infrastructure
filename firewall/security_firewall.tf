@@ -158,6 +158,27 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   }
 
   rule {
+    name     = "${local.namespace}-allow-nul-dev-ips"
+    priority = 15
+
+    action {
+      allow {}
+    }
+
+    statement {
+      ip_set_reference_statement {
+        arn = aws_wafv2_ip_set.nul_dev_ip_set.arn
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-allow-nul-dev-ips"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
     name     = "${local.namespace}-block-meadow-access"
     priority = 20
 
