@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform:
   - AWS::Serverless-2016-10-31
   - AWS::LanguageExtensions
@@ -44,6 +44,7 @@ Resources:
         CorsAllowCredentials: "true"
         CorsAllowHeaders: "authorization, cookie"
         CorsAllowOrigin: REFLECT_ORIGIN
+        CreateMetadataFunction: "true"
         ForceHost: !Sub "${Hostname}.${DomainName}"
         IiifLambdaMemory: !Ref IiifLambdaMemory
         IiifLambdaTimeout: !Ref IiifLambdaTimeout
@@ -70,7 +71,7 @@ Resources:
                 - edgelambda.amazonaws.com
                 - lambda.amazonaws.com
             Action:
-              - 'sts:AssumeRole'
+              - "sts:AssumeRole"
       Policies:
         Version: 2012-10-17
         Statement:
@@ -79,14 +80,14 @@ Resources:
             Action:
               - s3:ListBucket
               - s3:GetObject
-            Resource: 
+            Resource:
               - !Sub "arn:aws:s3:::${SourceBucket}"
               - !Sub "arn:aws:s3:::${SourceBucket}/*"
   ViewerRequestSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: !Ref ViewerRequestFunction
-      SecretString: 
+      SecretString:
         Fn::ToJsonString:
           allowFrom: !Ref AllowFromReferers
           dcApiEndpoint: !Ref DcApiEndpoint
@@ -94,7 +95,7 @@ Resources:
           apiTokenKey: !Ref ApiTokenKey
   ViewerRequestSecretAccess:
     Type: AWS::SecretsManager::ResourcePolicy
-    Properties: 
+    Properties:
       BlockPublicPolicy: true
       ResourcePolicy:
         Version: "2012-10-17"
@@ -172,7 +173,7 @@ Resources:
         MinTTL: 1
         Name: !Sub "${AWS::StackName}-CachingOptimizedWithVariableOrigin"
         ParametersInCacheKeyAndForwardedToOrigin:
-          CookiesConfig: 
+          CookiesConfig:
             CookieBehavior: none
           EnableAcceptEncodingBrotli: true
           EnableAcceptEncodingGzip: true
