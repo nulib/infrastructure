@@ -90,7 +90,7 @@ resource "aws_ecs_task_definition" "solr" {
   container_definitions = jsonencode([
     {
       name                = "solr"
-      image               = "${module.core.outputs.ecs.registry_url}/solr:8.11-slim"
+      image               = "solr:9-slim"
       essential           = true
       cpu                 = 1024
       environment = [

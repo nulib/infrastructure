@@ -1,3 +1,7 @@
+variable "bastion_user" {
+  type    = string
+}
+
 variable "cpu" {
   type    = number
   default = 1024

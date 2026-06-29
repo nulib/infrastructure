@@ -61,7 +61,7 @@ resource "null_resource" "this_database" {
   }
 
   connection {
-    user        = "ec2-user"
+    user        = var.bastion_user
     host        = local.core.bastion.hostname
     agent       = true
     timeout     = "3m"

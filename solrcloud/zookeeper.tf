@@ -65,7 +65,7 @@ resource "aws_ecs_task_definition" "zookeeper" {
   container_definitions = jsonencode([
     {
       name                = "zookeeper"
-      image               = "${module.core.outputs.ecs.registry_url}/zookeeper:3.8"
+      image               = "zookeeper:3.9"
       essential           = true
       cpu                 = 256
       environment = [

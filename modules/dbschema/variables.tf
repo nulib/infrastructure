@@ -11,3 +11,7 @@ variable "state_bucket" {
   type    = string
   default = "nulterra-state-sandbox"
 }
+
+variable "bastion_user" {
+  type    = string
+}
