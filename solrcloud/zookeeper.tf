@@ -8,6 +8,11 @@ resource "aws_iam_role_policy_attachment" "zookeeper_exec_command" {
   policy_arn = module.core.outputs.ecs.allow_exec_command_policy_arn
 }
 
+resource "aws_iam_role_policy_attachment" "zookeeper_backup_bucket_access" {
+  role       = aws_iam_role.zookeeper_task_role.id
+  policy_arn = aws_iam_policy.solr_backup_bucket_access.arn
+}
+
 resource "aws_security_group" "zookeeper_service" {
   name        = "${local.namespace}-zookeeper-service"
   description = "Zookeeper Service Security Group"
@@ -65,14 +70,18 @@ resource "aws_ecs_task_definition" "zookeeper" {
   container_definitions = jsonencode([
     {
       name                = "zookeeper"
-      image               = "zookeeper:3.9"
+      image               = docker_registry_image.zookeeper.name
       essential           = true
       cpu                 = 256
       environment = [
+        { name = "S3_BUCKET",                  value = aws_s3_bucket.solr_backup.bucket },
+        { name = "S3_PREFIX",                  value = "zk" },
+        { name = "BACKUP_INTERVAL",            value = "360" },
+        { name = "ZK_ADMIN_AUTH",              value = "digest super:${var.default_zk_password}" },
         { name = "ZOO_4LW_COMMANDS_WHITELIST", value = "*" },
         { name = "ZOO_INIT_LIMIT",             value = "30" },
         { name = "ZOO_MY_ID",                  value = tostring(count.index+1) },
-        { name = "ZOO_SERVERS",                value = replace(join(" ", local.zookeeper_ensemble), "zookeeper-${count.index+1}.${module.core.outputs.vpc.service_discovery_dns_zone.name}", "0.0.0.0") },
+        { name = "ZOO_SERVERS",                value = join(" ", local.zookeeper_ensemble) },
         { name = "ZOO_STANDALONE_ENABLED",     value = "false" },
         { name = "ZOO_CFG_EXTRA",              value = "electionPortBindRetry=0" }
       ]

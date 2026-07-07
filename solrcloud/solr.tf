@@ -85,18 +85,25 @@ resource "aws_iam_role_policy_attachment" "solr_exec_command" {
   policy_arn = module.core.outputs.ecs.allow_exec_command_policy_arn
 }
 
+resource "aws_iam_role_policy_attachment" "solr_backup_bucket_access" {
+  role       = aws_iam_role.solr_task_role.id
+  policy_arn = aws_iam_policy.solr_backup_bucket_access.arn
+}
+
+
 resource "aws_ecs_task_definition" "solr" {
   family = "solr"
   container_definitions = jsonencode([
     {
       name                = "solr"
-      image               = "solr:9-slim"
+      image               = "solr:9"
       essential           = true
       cpu                 = 1024
       environment = [
-        { name = "SOLR_OPTS",       value = "-Dsolr.allowPaths=/data/backup" },
+        { name = "SOLR_OPTS",       value = "-Dsolr.allowPaths=/data/backup -Ds3.bucket.name=${aws_s3_bucket.solr_backup.bucket} -Ds3.bucket.region=${data.aws_region.current.name}" },
         { name = "SOLR_HEAP",       value = "${1024 * 0.9765625}m" },
         { name = "SOLR_MODE",       value = "solrcloud"  },
+        { name = "SOLR_MODULES",    value = "analysis-extras,extraction,s3-repository" },
         { name = "ZK_HOST",         value = join(",", local.zookeeper_servers) }
       ]
       portMappings = [
