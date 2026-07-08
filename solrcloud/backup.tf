@@ -8,6 +8,50 @@ locals {
   })
 }
 
+resource "aws_s3_bucket" "solr_backup" {
+  bucket = "${local.namespace}-solr-backup"
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "solr_backup" {
+  bucket = aws_s3_bucket.solr_backup.id
+
+  rule {
+    id     = "intelligent-tiering"
+    status = "Enabled"
+
+    filter {} # applies to all objects
+
+    transition {
+      days          = 0
+      storage_class = "INTELLIGENT_TIERING"
+    }
+  }
+}
+
+resource "aws_iam_policy" "solr_backup_bucket_access" {
+  name        = "solr-backup-bucket-access"
+  description = "Allow Solr & Zookeeper tasks to access backup bucket"
+  policy      = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = [aws_s3_bucket.solr_backup.arn]
+      },
+      {
+        Effect   = "Allow"
+        Action   = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = ["${aws_s3_bucket.solr_backup.arn}/*"]
+      }
+    ]
+  })
+}
+
 module "backup_lambda" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "~> 3.3.1"

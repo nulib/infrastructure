@@ -1,50 +1,3 @@
-resource "aws_efs_file_system" "solr_backup_volume" {
-  encrypted      = false
-  tags           = { Name = "stack-solr-backup" }
-}
-
-resource "aws_efs_mount_target" "solr_backup_mount_target" {
-  for_each          = toset(module.core.outputs.vpc.private_subnets.ids)
-  file_system_id    = aws_efs_file_system.solr_backup_volume.id
-  security_groups   = [
-    aws_security_group.solr_backup_access.id
-  ]
-  subnet_id         = each.key
-}
-
-resource "aws_security_group" "solr_backup_access" {
-  name        = "${local.namespace}-solr-backup"
-  description = "Solr Backup Volume Security Group"
-  vpc_id      = module.core.outputs.vpc.id
-}
-
-resource "aws_security_group_rule" "solr_backup_egress" {
-  security_group_id   = aws_security_group.solr_backup_access.id
-  type                = "egress"
-  from_port           = 0
-  to_port             = 65535
-  protocol            = -1
-  cidr_blocks         = ["0.0.0.0/0"]
-}
-
-resource "aws_security_group_rule" "solr_backup_ingress" {
-  security_group_id           = aws_security_group.solr_backup_access.id
-  type                        = "ingress"
-  from_port                   = 2049
-  to_port                     = 2049
-  protocol                    = "tcp"
-  source_security_group_id    = aws_security_group.solr_service.id
-}
-
-resource "aws_security_group_rule" "solr_backup_ingress_bastion" {
-  security_group_id           = aws_security_group.solr_backup_access.id
-  type                        = "ingress"
-  from_port                   = 2049
-  to_port                     = 2049
-  protocol                    = "tcp"
-  source_security_group_id    = module.core.outputs.bastion.security_group
-}
-
 resource "aws_security_group" "solr_service" {
   name        = "${local.namespace}-solr-service"
   description = "Solr Service Security Group"
@@ -109,9 +62,6 @@ resource "aws_ecs_task_definition" "solr" {
       portMappings = [
         { protocol = "tcp", hostPort = 8983, containerPort = 8983 }
       ]
-      mountPoints = [
-        { sourceVolume = "solr-backup", containerPath = "/data/backup" }
-      ]
       volumesFrom  = []
       readonlyRootFilesystem = false
       logConfiguration = {
@@ -130,13 +80,6 @@ resource "aws_ecs_task_definition" "solr" {
       }
     }
   ])
-
-  volume {
-    name = "solr-backup"
-    efs_volume_configuration {
-      file_system_id = aws_efs_file_system.solr_backup_volume.id
-    }
-  }
 
   task_role_arn            = aws_iam_role.solr_task_role.arn
   execution_role_arn       = module.core.outputs.ecs.task_execution_role_arn
