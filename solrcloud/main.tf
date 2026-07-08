@@ -61,31 +61,3 @@ resource "aws_cloudwatch_log_group" "solrcloud_logs" {
   name                = "/ecs/solrcloud"
   retention_in_days   = 3
 }
-
-resource "aws_s3_bucket" "solr_backup" {
-  bucket = "${local.namespace}-solr-backup"
-}
-
-resource "aws_iam_policy" "solr_backup_bucket_access" {
-  name        = "solr-backup-bucket-access"
-  description = "Allow Solr & Zookeeper tasks to access backup bucket"
-  policy      = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect   = "Allow"
-        Action   = ["s3:ListBucket"]
-        Resource = [aws_s3_bucket.solr_backup.arn]
-      },
-      {
-        Effect   = "Allow"
-        Action   = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ]
-        Resource = ["${aws_s3_bucket.solr_backup.arn}/*"]
-      }
-    ]
-  })
-}

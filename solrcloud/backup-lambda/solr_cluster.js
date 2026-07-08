@@ -1,8 +1,8 @@
 const axios = require('axios').default;
 const { URLSearchParams } = require('url');
 
-const defaultBackupLocation = '/data/backup';
-const defaultBackupRetention = 14;
+const defaultBackupLocation = 'solr';
+const defaultBackupRetention = 7;
 
 class SolrCluster {
   #client
@@ -33,11 +33,23 @@ class SolrCluster {
     return await this.#request('LISTBACKUP', { name, location });
   }
 
+  async findLatestBackup(name) {
+    const { backups } = await this.listBackups(name);
+    if (!backups || backups.length === 0) return null;
+    return backups.reduce((latest, backup) => {
+      return !latest || backup.startTime > latest.startTime ? backup : latest;
+    }, null) || {};
+  }
+
   async restore(collection, name, options) {
     if (name === undefined) name = collection;
     if (options === undefined) options = { failIfExists: true }
     let { backupId, failIfExists } = options;
     failIfExists = !!failIfExists;
+
+    if (!backupId) {
+      ({ backupId } = await this.findLatestBackup(name));
+    }
 
     if (!failIfExists) {
       const state = await this.status();
