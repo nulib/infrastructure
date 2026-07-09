@@ -4,7 +4,7 @@ terraform {
   }
 
   required_providers {
-    aws = "~> 4.0"
+    aws = "~> 6.0"
     docker = {
       source  = "kreuzwerker/docker"
       version = "4.5.0"
@@ -52,6 +52,7 @@ module "core" {
 }
 
 data "aws_region" "current" { }
+data "aws_caller_identity" "current" { }
 
 resource "aws_ecs_cluster" "solrcloud" {
   name = "solrcloud"

@@ -53,7 +53,7 @@ resource "aws_ecs_task_definition" "solr" {
       essential           = true
       cpu                 = 1024
       environment = [
-        { name = "SOLR_OPTS",       value = "-Dsolr.allowPaths=/data/backup -Ds3.bucket.name=${aws_s3_bucket.solr_backup.bucket} -Ds3.bucket.region=${data.aws_region.current.name}" },
+        { name = "SOLR_OPTS",       value = "-Dsolr.allowPaths=/data/backup -Ds3.bucket.name=${aws_s3_bucket.solr_backup.bucket} -Ds3.bucket.region=${data.aws_region.current.region}" },
         { name = "SOLR_HEAP",       value = "${1024 * 0.9765625}m" },
         { name = "SOLR_MODE",       value = "solrcloud"  },
         { name = "SOLR_MODULES",    value = "analysis-extras,extraction,s3-repository" },
@@ -68,7 +68,7 @@ resource "aws_ecs_task_definition" "solr" {
         logDriver = "awslogs"
         options   = {
           awslogs-group         = aws_cloudwatch_log_group.solrcloud_logs.name
-          awslogs-region        = data.aws_region.current.name
+          awslogs-region        = data.aws_region.current.region
           awslogs-stream-prefix = "solr"
         }
       }
