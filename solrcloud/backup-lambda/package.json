@@ -9,8 +9,9 @@
   "author": "MBK",
   "license": "Apache-2.0",
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1083.0",
+    "@honeybadger-io/js": "^6.5.2",
     "axios": "^1.5.1",
-    "date-and-time": "^3.0.3",
-    "@honeybadger-io/js": "^6.5.2"
+    "date-and-time": "^3.0.3"
   }
 }

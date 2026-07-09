@@ -1,10 +1,7 @@
 locals {
   solr_collections = ["arch", "avr"]
   backup_payload   = jsonencode({
-    operation = "backup"
-    solr = {
-      baseUrl = local.solr_endpoint
-    }
+    operation = "solr:backup"
   })
 }
 
@@ -54,12 +51,12 @@ resource "aws_iam_policy" "solr_backup_bucket_access" {
 
 module "backup_lambda" {
   source  = "terraform-aws-modules/lambda/aws"
-  version = "~> 3.3.1"
+  version = "~> 8.8.0"
 
   function_name          = "${local.namespace}-solr-utils"
   description            = "Utility functions for managing a solr cluster"
   handler                = "index.handler"
-  runtime                = "nodejs18.x"
+  runtime                = "nodejs24.x"
   source_path            = "${path.module}/backup-lambda"
   timeout                = 120
   vpc_subnet_ids         = module.core.outputs.vpc.private_subnets.ids
@@ -67,11 +64,22 @@ module "backup_lambda" {
     aws_security_group.solr_client.id,
     module.core.outputs.vpc.http_security_group_id
   ]
-  attach_network_policy  = true
+  attach_network_policy    = true
+  attach_policy_statements = true
+
+  policy_statements = {
+    solrcloud_secret = {
+      effect    = "Allow"
+      actions   = ["secretsmanager:GetSecretValue"]
+      resources = ["arn:aws:secretsmanager:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:secret:${module.core.outputs.stack.prefix}/infrastructure/solrcloud-*"]
+    }
+  }
+
   environment_variables = {
     HONEYBADGER_API_KEY       = var.honeybadger_api_key
     HONEYBADGER_ENV           = var.honeybadger_env
     HONEYBADGER_CHECKIN_ID    = var.honeybadger_checkin_id
+    SECRETS_PATH              = module.core.outputs.stack.prefix
   }
 }
 
@@ -100,7 +108,7 @@ resource "aws_cloudwatch_event_rule" "back_up_solr" {
   name                  = "${local.namespace}-solr-backup"
   description           = "Back up solr collections"
   schedule_expression   = var.backup_schedule
-  is_enabled            = true
+  state                 = "ENABLED"
 }
 
 resource "aws_cloudwatch_event_target" "back_up_solr" {
