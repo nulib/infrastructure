@@ -42,7 +42,7 @@ Resources:
         SemanticVersion: !Ref ServerlessIiifVersion
       Parameters:
         CorsAllowCredentials: "true"
-        CorsAllowHeaders: "authorization, cookie"
+        CorsAllowHeaders: "accept, authorization, cookie"
         CorsAllowOrigin: REFLECT_ORIGIN
         CreateMetadataFunction: "true"
         ForceHost: !Sub "${Hostname}.${DomainName}"
@@ -54,7 +54,7 @@ Resources:
   ViewerRequestFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Runtime: nodejs18.x
+      Runtime: nodejs24.x
       CodeUri: ./src
       Handler: index.handler
       Architectures:
@@ -180,6 +180,7 @@ Resources:
           HeadersConfig:
             HeaderBehavior: whitelist
             Headers:
+              - Accept
               - Origin
           QueryStringsConfig:
             QueryStringBehavior: none
