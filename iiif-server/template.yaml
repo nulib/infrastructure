@@ -42,7 +42,7 @@ Resources:
         SemanticVersion: !Ref ServerlessIiifVersion
       Parameters:
         CorsAllowCredentials: "true"
-        CorsAllowHeaders: "authorization, cookie"
+        CorsAllowHeaders: "accept, authorization, cookie"
         CorsAllowOrigin: REFLECT_ORIGIN
         CreateMetadataFunction: "true"
         ForceHost: !Sub "${Hostname}.${DomainName}"
@@ -180,6 +180,7 @@ Resources:
           HeadersConfig:
             HeaderBehavior: whitelist
             Headers:
+              - Accept
               - Origin
           QueryStringsConfig:
             QueryStringBehavior: none

@@ -62,6 +62,9 @@ function parsePath(path) {
   const segments = path.split(/\//).reverse();
 
   if (segments.length < 8) {
+    if (/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/.test(segments[0])) {
+      segments.unshift("info.json");
+    }
     return {
       poster: segments[2] == "posters",
       id: segments[1],
