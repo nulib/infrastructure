@@ -3,7 +3,7 @@ output "fedora4_endpoint" {
 }
 
 output "fedora6_endpoint" {
-  value = "http://${aws_service_discovery_service.fedora6.name}.${module.core.outputs.vpc.service_discovery_dns_zone.name}:8080/rest"
+  value = "http://${local.fcrepo6_admin_user}:${local.fcrepo6_admin_pass}@${aws_service_discovery_service.fedora6.name}.${module.core.outputs.vpc.service_discovery_dns_zone.name}:8080/rest"
 }
 
 output "fedora6_ocfl_bucket" {
