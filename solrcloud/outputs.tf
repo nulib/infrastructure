@@ -11,6 +11,8 @@ output "utils" {
 output "solr" {
   value = {
     endpoint                = local.solr_endpoint
+    username                = "solrAdmin"
+    password                = var.default_solr_password
     client_security_group   = aws_security_group.solr_client.id
     cluster_size            = var.solr_cluster_size
   }
@@ -19,6 +21,8 @@ output "solr" {
 output "zookeeper" {
   value = {
     servers                 = local.zookeeper_servers
+    username                = "super"
+    password                = var.default_zk_password
     client_security_group   = aws_security_group.zookeeper_client.id
   }
 }
