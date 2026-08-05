@@ -42,7 +42,7 @@ function viewerRequestOptions(request) {
     statusDescription: "OK",
     headers: {
       "access-control-allow-headers": [
-        { key: "Access-Control-Allow-Headers", value: "authorization, cookie" }
+        { key: "Access-Control-Allow-Headers", value: "accept, authorization, cookie" }
       ],
       "access-control-allow-credentials": [
         { key: "Access-Control-Allow-Credentials", value: "true" }
