@@ -54,7 +54,7 @@ Resources:
   ViewerRequestFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Runtime: nodejs18.x
+      Runtime: nodejs24.x
       CodeUri: ./src
       Handler: index.handler
       Architectures:
@@ -236,6 +236,51 @@ Resources:
             PathPattern: "public/*"
             TargetOriginId: PublicManifests
             ViewerProtocolPolicy: https-only
+
+  # Logging
+  RequestLoggingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${Hostname}.${DomainName}-request-logging"
+  RequestLoggingBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref RequestLoggingBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AWSLogDeliveryWrite
+            Effect: Allow
+            Principal:
+              Service: delivery.logs.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub "arn:aws:s3:::${RequestLoggingBucket}/*"
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:delivery-source:*"
+  AccessLogDeliverySource:
+    Type: AWS::Logs::DeliverySource
+    Properties:
+      Name: !Sub "${AWS::StackName}-access-logs"
+      LogType: ACCESS_LOGS
+      ResourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CachingDistribution}"
+  AccessLogDeliveryDestination:
+    Type: AWS::Logs::DeliveryDestination
+    Properties:
+      Name: !Sub "${AWS::StackName}-access-logs-s3"
+      DestinationResourceArn: !GetAtt RequestLoggingBucket.Arn
+      OutputFormat: parquet   # or json | plain | w3c | raw
+  AccessLogDelivery:
+    Type: AWS::Logs::Delivery
+    DependsOn: RequestLoggingBucketPolicy
+    Properties:
+      DeliverySourceName: !Ref AccessLogDeliverySource
+      DeliveryDestinationArn: !GetAtt AccessLogDeliveryDestination.Arn
+      S3SuffixPath: "cloudfront/{DistributionId}/{yyyy}/{MM}/{dd}/{HH}"
+      S3EnableHiveCompatiblePath: false
+
   Route53Record:
     Type: AWS::Route53::RecordSet
     Properties:
