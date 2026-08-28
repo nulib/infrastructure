@@ -10,7 +10,7 @@ Resources:
       Description: Run the fixity step function
       CodeUri: ./execute-fixity
       Handler: index.handler
-      Runtime: nodejs22.x
+      Runtime: nodejs24.x
       MemorySize: 256
       Timeout: 60
       Policies:
@@ -29,12 +29,9 @@ Resources:
       FunctionName: !Ref executeFixity
       Principal: s3.amazonaws.com
   sm:
-    Type: AWS::CloudFormation::Stack
+    Type: AWS::Serverless::Application
     Properties:
-      TemplateURL: "https://awsi-megs-guidances-us-east-1.s3.amazonaws.com/serverless-fixity-for-digital-preservation-compliance/latest/serverless-fixity-for-digital-preservation-compliance.template"
-      Parameters:
-        Email: fixity-blackhole@mailinator.com
-        VendorAccountRoleList: ""
+      Location: ../../serverless-fixity/template.yaml
 Outputs:
   executeFixityFunctionName:
     Description: "The name of the execute fixity Lambda function"
