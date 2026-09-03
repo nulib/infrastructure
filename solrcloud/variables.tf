@@ -41,7 +41,3 @@ variable "solr_image" {
 variable "default_zk_password" {
   type    = string
 }
-
-variable "default_solr_password" {
-  type    = string
-}
