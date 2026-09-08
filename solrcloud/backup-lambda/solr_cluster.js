@@ -49,7 +49,7 @@ class SolrCluster {
     );
   }
 
-  async pruneCollection(collection) {
+  async pruneCollection(collection, opts = {}) {
     console.log(`Pruning ${collection}`);
     const { liveReplicas } = await this.deleteDeadReplicas(collection);
     console.log(liveReplicas);
@@ -57,7 +57,7 @@ class SolrCluster {
       console.warn(`No live replicas for ${collection}. Deleting collection.`);
       await this.deleteCollection(collection);
     } else {
-      await this.addReplicas(collection);
+      await this.addReplicas(collection, opts);
     }
   }
 
@@ -97,8 +97,8 @@ class SolrCluster {
     });
   }
 
-  async deleteDeadReplicas(collection, shard) {
-    if (!shard) shard = "shard1";
+  async deleteDeadReplicas(collection, opts = {}) {
+    const shard = opts.shard || "shard1";
     const state = await this.status({ collection });
     const collectionState = state?.cluster?.collections?.[collection];
     if (!collectionState) return { collection, liveReplicas: [] };
@@ -116,13 +116,13 @@ class SolrCluster {
     return { collection, liveReplicas };
   }
 
-  async addReplicas(collection, shard) {
-    if (!shard) shard = "shard1";
+  async addReplicas(collection, opts = {}) {
+    const shard = opts.shard || "shard1";
     const state = await this.status({ collection });
     const collectionState = state.cluster.collections[collection];
     const replicas = collectionState.shards[shard].replicas;
-    const desiredCount = Number(collectionState.replicationFactor);
     const liveNodeCount = state.cluster.live_nodes.length;
+    const desiredCount = opts.expand ? liveNodeCount : Number(collectionState.replicationFactor);
     const toAdd =
       Math.min(desiredCount, liveNodeCount) - Object.keys(replicas).length;
     console.info(`Adding ${toAdd} replicas to ${collection}.${shard}`);
@@ -131,9 +131,9 @@ class SolrCluster {
     }
   }
 
-  async redistributeShard(collection, shard) {
-    await this.deleteDeadReplicas(collection, shard);
-    await this.addReplicas(collection, shard);
+  async redistributeShard(collection, opts = {}) {
+    await this.deleteDeadReplicas(collection, opts);
+    await this.addReplicas(collection, opts);
   }
 
   async deleteCollection(collection) {

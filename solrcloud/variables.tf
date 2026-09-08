@@ -30,14 +30,29 @@ variable "honeybadger_checkin_id" {
 
 variable "zookeeper_image" {
   type    = string
-  default = "zookeeper:3.9"
+  default = "public.ecr.aws/docker/library/zookeeper:3.9"
 }
 
 variable "solr_image" {
   type    = string
-  default = "solr:9"
+  default = "public.ecr.aws/docker/library/solr:9"
 }
 
 variable "default_zk_password" {
   type    = string
+}
+
+variable "solr_cpu" {
+  type    = number
+  default = 1024
+}
+
+variable "solr_task_memory" {
+  type    = number
+  default = 2048
+}
+
+variable "solr_heap" {
+  type    = number
+  default = 1000
 }

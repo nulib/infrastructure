@@ -49,12 +49,11 @@ resource "aws_ecs_task_definition" "solr" {
   container_definitions = jsonencode([
     {
       name                = "solr"
-      image               = "solr:9"
+      image               = var.solr_image
       essential           = true
-      cpu                 = 1024
       environment = [
         { name = "SOLR_OPTS",       value = "-Dsolr.allowPaths=/data/backup -Ds3.bucket.name=${aws_s3_bucket.solr_backup.bucket} -Ds3.bucket.region=${data.aws_region.current.region}" },
-        { name = "SOLR_HEAP",       value = "${1024 * 0.9765625}m" },
+        { name = "SOLR_HEAP",       value = "${var.solr_heap}m" },
         { name = "SOLR_MODE",       value = "solrcloud"  },
         { name = "SOLR_MODULES",    value = "analysis-extras,extraction,s3-repository" },
         { name = "ZK_HOST",         value = join(",", local.zookeeper_servers) }
@@ -85,8 +84,8 @@ resource "aws_ecs_task_definition" "solr" {
   execution_role_arn       = module.core.outputs.ecs.task_execution_role_arn
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = 1024
-  memory                   = 2048
+  cpu                      = var.solr_cpu
+  memory                   = var.solr_task_memory
 }
 
 resource "aws_service_discovery_service" "solr" {
