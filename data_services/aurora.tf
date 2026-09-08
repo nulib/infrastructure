@@ -10,6 +10,21 @@ resource "random_string" "aurora_master_password" {
   }
 }
 
+resource "aws_security_group" "db_client" {
+  name          = "${local.namespace}-db-client"
+  description   = "RDS Client Security Group"
+  vpc_id        = module.core.outputs.vpc.id
+
+  egress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags          = local.tags
+}
+
 module "aurora_postgresql" {
   source  = "terraform-aws-modules/rds-aurora/aws"
   version = "~> 9.16"
@@ -126,6 +141,30 @@ module "user_lambda" {
           values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/us-east-2/AWSReservedSSO_AWSAdministratorAccess_*"]
         }
       }
+    }
+  }
+}
+
+module "maintenance_lambda" {
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 3.3.1"
+
+  function_name          = "${local.namespace}-db-maintenance"
+  description            = "Cleans and vacuums certain database tables"
+  handler                = "main.handler"
+  runtime                = "python3.12"
+  source_path            = "${path.module}/db_maintenance"
+  timeout                = 600
+  publish                = true
+
+  vpc_subnet_ids         = module.core.outputs.vpc.public_subnets.ids
+  vpc_security_group_ids = [aws_security_group.db_client.id]
+  attach_network_policy  = true
+
+  allowed_triggers = {
+    DBMaintenanceRule = {
+
+      principal  = "events.amazonaws.com"
     }
   }
 }

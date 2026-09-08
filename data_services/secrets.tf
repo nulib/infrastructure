@@ -7,13 +7,6 @@ locals {
       password    = module.aurora_postgresql.cluster_master_password
     }
 
-    db = {
-      host     = aws_db_instance.db.address
-      port     = aws_db_instance.db.port
-      username = "dbadmin"
-      password = random_string.db_master_password.result
-    }
-
     cache = {
       address   = aws_route53_record.redis.name
       port      = 6379

@@ -37,7 +37,7 @@ resource "aws_elasticache_subnet_group" "redis" {
 resource "aws_elasticache_cluster" "redis" {
   cluster_id           = "${local.namespace}-redis"
   engine               = "redis"
-  node_type            = "cache.t2.small"
+  node_type            = "cache.t4g.small"
   num_cache_nodes      = 1
   engine_version       = "5.0.3"
   security_group_ids   = [aws_security_group.redis_service.id]
