@@ -44,6 +44,8 @@ const handler = async (event, _context) => {
       return await solrRestore(event);
     case "solr:ready":
       return await solrReady(event);
+    case "solr:rebalance":
+      return await solrRebalance(event);
     case "zookeeper:ready":
       return await zkReady(event);
     case "set-log-level":
@@ -60,23 +62,16 @@ const solrList = async (event) => {
 };
 
 const solrBackup = async (event) => {
+  const action = async (collection) => await solrCluster.backup(collection);
   if (event.collection) {
     return await solrCluster.backup(event.collection);
   } else if (event.collections) {
-    return await backupMultiple(event.collections);
+    return await doMultiple(event.collections, action);
   } else {
     const state = await solrCluster.status();
     const collections = Object.keys(state.cluster.collections);
-    return await backupMultiple(collections);
+    return await doMultiple(collections, action);
   }
-};
-
-const backupMultiple = async (collections) => {
-  const result = {};
-  for (const collection of collections) {
-    result[collection] = await solrCluster.backup(collection);
-  }
-  return result;
 };
 
 const solrRestore = async (event) => {
@@ -102,6 +97,27 @@ const solrReady = async (event) => {
     console.error(err.code, err.reason);
     return false;
   }
+};
+
+const solrRebalance = async (event) => {
+  const action = async (collection) => await solrCluster.pruneCollection(collection, { expand: event.expand });
+  if (event.collection) {
+    return await solrCluster.pruneCollection(event.collection, { expand: event.expand });
+  } else if (event.collections) {
+    return await doMultiple(event.collections, action);
+  } else {
+    const state = await solrCluster.status();
+    const collections = Object.keys(state.cluster.collections);
+    return await doMultiple(collections, action);
+  }
+};
+
+const doMultiple = async (collections, action) => {
+  const result = {};
+  for (const collection of collections) {
+    result[collection] = await action(collection);
+  }
+  return result;
 };
 
 const zkReady = async (event) => {
