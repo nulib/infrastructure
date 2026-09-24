@@ -44,6 +44,23 @@ resource "aws_iam_role_policy_attachment" "solr_backup_bucket_access" {
 }
 
 
+locals {
+  solr_gate_marker = "/gate/replicas-active"
+
+  # Until this node has first been ready, require the join-cluster sidecar's marker and
+  # every local core active; after that, liveness only. ECS has no separate readiness
+  # check, so a replica recovering later mustn't get its node killed.
+  solr_health_check = join(" ", [
+    "if [ -f /tmp/solr-ready ]; then",
+    "wget -q -O /dev/null http://localhost:8983/solr/;",
+    "else",
+    "[ -f ${local.solr_gate_marker} ] &&",
+    "wget -q -O /dev/null 'http://localhost:8983/solr/admin/info/health?requireHealthyCores=true' &&",
+    "touch /tmp/solr-ready;",
+    "fi"
+  ])
+}
+
 resource "aws_ecs_task_definition" "solr" {
   family = "solr"
   container_definitions = jsonencode([
@@ -52,14 +69,17 @@ resource "aws_ecs_task_definition" "solr" {
       image               = var.solr_image
       essential           = true
       environment = [
-        { name = "SOLR_OPTS",       value = "-Dsolr.allowPaths=/data/backup -Ds3.bucket.name=${aws_s3_bucket.solr_backup.bucket} -Ds3.bucket.region=${data.aws_region.current.region}" },
-        { name = "SOLR_HEAP",       value = "${var.solr_heap}m" },
-        { name = "SOLR_MODE",       value = "solrcloud"  },
-        { name = "SOLR_MODULES",    value = "analysis-extras,extraction,s3-repository" },
-        { name = "ZK_HOST",         value = join(",", local.zookeeper_servers) }
+        { name = "SOLR_OPTS",           value = "-Dsolr.allowPaths=/data/backup -Ds3.bucket.name=${aws_s3_bucket.solr_backup.bucket} -Ds3.bucket.region=${data.aws_region.current.region}" },
+        { name = "SOLR_HEAP",           value = "${var.solr_heap}m" },
+        { name = "SOLR_MODE",           value = "solrcloud"  },
+        { name = "SOLR_MODULES",        value = "analysis-extras,extraction,s3-repository" },
+        { name = "ZK_HOST",             value = join(",", local.zookeeper_servers) }
       ]
       portMappings = [
         { protocol = "tcp", hostPort = 8983, containerPort = 8983 }
+      ]
+      mountPoints = [
+        { sourceVolume = "gate", containerPath = "/gate", readOnly = true }
       ]
       volumesFrom  = []
       readonlyRootFilesystem = false
@@ -72,13 +92,41 @@ resource "aws_ecs_task_definition" "solr" {
         }
       }
       healthCheck = {
-        command  = ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8983/solr/"]
-        interval = 30
-        retries  = 3
-        timeout  = 5
+        command     = ["CMD-SHELL", local.solr_health_check]
+        interval    = 30
+        retries     = 3
+        timeout     = 5
+        startPeriod = 300
+      }
+    },
+    {
+      name        = "join-cluster"
+      image       = var.solr_sidecar_image
+      essential   = false
+      command     = ["python3", "-c", file("${path.module}/solr-sidecar/join_cluster.py")]
+      environment = [
+        { name = "MARKER_FILE", value = local.solr_gate_marker }
+      ]
+      mountPoints = [
+        { sourceVolume = "gate", containerPath = "/gate", readOnly = false }
+      ]
+      dependsOn = [
+        { containerName = "solr", condition = "START" }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options   = {
+          awslogs-group         = aws_cloudwatch_log_group.solrcloud_logs.name
+          awslogs-region        = data.aws_region.current.region
+          awslogs-stream-prefix = "join-cluster"
+        }
       }
     }
   ])
+
+  volume {
+    name = "gate"
+  }
 
   task_role_arn            = aws_iam_role.solr_task_role.arn
   execution_role_arn       = module.core.outputs.ecs.task_execution_role_arn
@@ -103,6 +151,9 @@ resource "aws_service_discovery_service" "solr" {
 }
 
 resource "aws_ecs_service" "solr" {
+  # Roll Solr only after every zookeeper member is steady
+  depends_on = [module.zookeeper_3]
+
   name                   = "solr"
   cluster                = aws_ecs_cluster.solrcloud.id
   task_definition        = aws_ecs_task_definition.solr.arn
@@ -110,7 +161,15 @@ resource "aws_ecs_service" "solr" {
   enable_execute_command = true
   launch_type            = "FARGATE"
   platform_version       = "1.4.0"
-  
+
+  deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent         = 200
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   lifecycle {
     ignore_changes          = [desired_count]
   }

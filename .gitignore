@@ -14,3 +14,4 @@ package.yml
 node_modules
 data_services/model/.working
 __pycache__
+solr_backups/*
