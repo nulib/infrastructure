@@ -1,8 +1,3 @@
-variable "zookeeper_ensemble_size" {
-  type    = number
-  default = 3
-}
-
 variable "solr_cluster_size" {
   type    = number
   default = 4
@@ -33,6 +28,11 @@ variable "zookeeper_image" {
   default = "public.ecr.aws/docker/library/zookeeper:3.9"
 }
 
+variable "zookeeper_sidecar_image" {
+  type    = string
+  default = "public.ecr.aws/aws-cli/aws-cli:latest"
+}
+
 variable "solr_image" {
   type    = string
   default = "public.ecr.aws/docker/library/solr:9"
@@ -55,4 +55,9 @@ variable "solr_task_memory" {
 variable "solr_heap" {
   type    = number
   default = 1000
+}
+
+variable "solr_sidecar_image" {
+  type    = string
+  default = "public.ecr.aws/docker/library/python:3-slim"
 }

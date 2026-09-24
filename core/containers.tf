@@ -1,5 +1,5 @@
 locals {
-  repositories = toset(["arch", "avr", "fcrepo4", "meadow", "solr", "zookeeper"])
+  repositories = toset(["arch", "avr", "fcrepo4", "meadow"])
   default_lifecycle_rule = {
     rulePriority    = 1
     description     = "Expire untagged images after 7 days"

@@ -12,11 +12,7 @@ class SolrCluster {
   }
 
   async status(params) {
-    try {
-      return await this.#request("CLUSTERSTATUS", params || {});
-    } catch (error) {
-      return {};
-    }
+    return await this.#request("CLUSTERSTATUS", params || {});
   }
 
   async liveNodeCount() {
@@ -53,11 +49,13 @@ class SolrCluster {
     console.log(`Pruning ${collection}`);
     const { liveReplicas } = await this.deleteDeadReplicas(collection);
     console.log(liveReplicas);
-    if (liveReplicas.length === 0) {
+    if (liveReplicas.length > 0) {
+      await this.addReplicas(collection, opts);
+    } else if (opts.deleteIfEmpty) {
       console.warn(`No live replicas for ${collection}. Deleting collection.`);
       await this.deleteCollection(collection);
     } else {
-      await this.addReplicas(collection, opts);
+      console.warn(`No live replicas for ${collection}. Leaving it alone.`);
     }
   }
 
@@ -72,7 +70,7 @@ class SolrCluster {
     prune = !!prune;
 
     if (prune) {
-      await this.pruneCollection(collection);
+      await this.pruneCollection(collection, { deleteIfEmpty: true });
     }
 
     if (!backupId) {
@@ -101,19 +99,22 @@ class SolrCluster {
     const shard = opts.shard || "shard1";
     const state = await this.status({ collection });
     const collectionState = state?.cluster?.collections?.[collection];
-    if (!collectionState) return { collection, liveReplicas: [] };
+    if (!collectionState) return { collection, liveReplicas: [], deletedReplicas: [] };
     const replicas = collectionState?.shards?.[shard]?.replicas;
-    if (!replicas) return { collection, liveReplicas: [] };
+    if (!replicas) return { collection, liveReplicas: [], deletedReplicas: [] };
+    const liveNodes = new Set(state.cluster.live_nodes);
+    const deletedReplicas = [];
     for (const replica in replicas) {
-      if (replicas[replica].state == "down") {
+      if (!liveNodes.has(replicas[replica].node_name)) {
         console.info(`Deleting dead replica ${collection}.${shard}.${replica}`);
         await this.#request("DELETEREPLICA", { collection, shard, replica });
+        deletedReplicas.push(replica);
       }
     }
     const liveReplicas = Object.entries(replicas)
-      .filter(([_, r]) => r.state !== "down")
+      .filter(([_, r]) => liveNodes.has(r.node_name))
       .map(([name, _]) => name);
-    return { collection, liveReplicas };
+    return { collection, liveReplicas, deletedReplicas };
   }
 
   async addReplicas(collection, opts = {}) {
@@ -121,6 +122,16 @@ class SolrCluster {
     const state = await this.status({ collection });
     const collectionState = state.cluster.collections[collection];
     const replicas = collectionState.shards[shard].replicas;
+    if (opts.node) {
+      const onNode = Object.values(replicas).some((r) => r.node_name === opts.node && r.state !== "down");
+      if (onNode) {
+        console.info(`${collection}.${shard} already has a replica on ${opts.node}`);
+      } else {
+        console.info(`Adding a replica of ${collection}.${shard} on ${opts.node}`);
+        await this.#request("ADDREPLICA", { collection, shard, node: opts.node });
+      }
+      return;
+    }
     const liveNodeCount = state.cluster.live_nodes.length;
     const desiredCount = opts.expand ? liveNodeCount : Number(collectionState.replicationFactor);
     const toAdd =

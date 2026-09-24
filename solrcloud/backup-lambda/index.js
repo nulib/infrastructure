@@ -46,6 +46,10 @@ const handler = async (event, _context) => {
       return await solrReady(event);
     case "solr:rebalance":
       return await solrRebalance(event);
+    case "solr:status":
+      return await solrCluster.status(event.collection ? { collection: event.collection } : {});
+    case "solr:prune-dead":
+      return await solrPruneDead(event);
     case "zookeeper:ready":
       return await zkReady(event);
     case "set-log-level":
@@ -100,9 +104,23 @@ const solrReady = async (event) => {
 };
 
 const solrRebalance = async (event) => {
-  const action = async (collection) => await solrCluster.pruneCollection(collection, { expand: event.expand });
+  const opts = { expand: event.expand, node: event.node };
+  const action = async (collection) => await solrCluster.pruneCollection(collection, opts);
   if (event.collection) {
-    return await solrCluster.pruneCollection(event.collection, { expand: event.expand });
+    return await solrCluster.pruneCollection(event.collection, opts);
+  } else if (event.collections) {
+    return await doMultiple(event.collections, action);
+  } else {
+    const state = await solrCluster.status();
+    const collections = Object.keys(state.cluster.collections);
+    return await doMultiple(collections, action);
+  }
+};
+
+const solrPruneDead = async (event) => {
+  const action = async (collection) => await solrCluster.deleteDeadReplicas(collection);
+  if (event.collection) {
+    return await action(event.collection);
   } else if (event.collections) {
     return await doMultiple(event.collections, action);
   } else {

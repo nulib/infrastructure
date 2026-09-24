@@ -43,6 +43,19 @@ resource "aws_security_group_rule" "zookeeper_service_ingress" {
   source_security_group_id = each.value
 }
 
+# Members probe each other's client port (`srvr`): the zk-backup sidecar to decide between
+# joining and restoring, and the health check to tell "still syncing" from "cold start".
+# Without this, those probes time out, and a syncing member looks like a cold start and
+# reports healthy.
+resource "aws_security_group_rule" "zookeeper_peer_client_ingress" {
+  security_group_id        = aws_security_group.zookeeper_service.id
+  type                     = "ingress"
+  from_port                = 2181
+  to_port                  = 2181
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.zookeeper_service.id
+}
+
 resource "aws_security_group_rule" "zookeeper_service_admin_ingress" {
   security_group_id  = aws_security_group.zookeeper_service.id
   type               = "ingress"
@@ -59,116 +72,138 @@ resource "aws_security_group" "zookeeper_client" {
 }
 
 locals {
-  zookeeper_hosts = formatlist("zookeeper-%s.${module.core.outputs.vpc.service_discovery_dns_zone.name}", range(1, var.zookeeper_ensemble_size+1))
+  # Fixed at 3: each member is its own module below, rolled one after another
+  zookeeper_ensemble_size = 3
+
+  zookeeper_hosts    = formatlist("zookeeper-%s.${module.core.outputs.vpc.service_discovery_dns_zone.name}", range(1, local.zookeeper_ensemble_size+1))
   zookeeper_ensemble = [for index, server in local.zookeeper_hosts : "server.${index+1}=${server}:2888:3888;2181"]
   zookeeper_servers  = [for server in local.zookeeper_hosts : "${server}:2181"]
-}
 
-resource "aws_ecs_task_definition" "zookeeper" {
-  count  = var.zookeeper_ensemble_size
-  family = "zookeeper-${count.index+1}"
-  container_definitions = jsonencode([
-    {
-      name                = "zookeeper"
-      image               = docker_registry_image.zookeeper.name
-      essential           = true
-      cpu                 = 256
-      environment = [
-        { name = "S3_BUCKET",                  value = aws_s3_bucket.solr_backup.bucket },
-        { name = "S3_PREFIX",                  value = "zk" },
-        { name = "BACKUP_INTERVAL",            value = "360" },
-        { name = "ZK_ADMIN_AUTH",              value = "digest super:${var.default_zk_password}" },
-        { name = "ZOO_4LW_COMMANDS_WHITELIST", value = "*" },
-        { name = "ZOO_INIT_LIMIT",             value = "30" },
-        { name = "ZOO_MY_ID",                  value = tostring(count.index+1) },
-        { name = "ZOO_SERVERS",                value = join(" ", local.zookeeper_ensemble) },
-        { name = "ZOO_STANDALONE_ENABLED",     value = "false" },
-        { name = "ZOO_CFG_EXTRA",              value = "electionPortBindRetry=0" }
-      ]
-      mountPoints  = []
-      volumesFrom  = []
-      portMappings = [{
-          protocol        = "tcp"
-          hostPort        = 8080
-          containerPort   = 8080
-        },
-        {
-          protocol        = "tcp"
-          hostPort        = 2181
-          containerPort   = 2181
-        },
-        {
-          protocol        = "tcp"
-          hostPort        = 2888
-          containerPort   = 2888
-        },
-        {
-          protocol        = "tcp"
-          hostPort        = 3888
-          containerPort   = 3888
-        }
-      ]
-      readonlyRootFilesystem = false
-      logConfiguration = {
-        logDriver = "awslogs"
-        options   = {
-          awslogs-group         = aws_cloudwatch_log_group.solrcloud_logs.name
-          awslogs-region        = data.aws_region.current.region
-          awslogs-stream-prefix = "zk"
-        }
-      }
-      healthCheck = {
-        command  = ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/commands/stat"]
-        interval = 30
-        retries  = 3
-        timeout  = 5
-      }
-    }
-  ])
-  task_role_arn            = aws_iam_role.zookeeper_task_role.arn
-  execution_role_arn       = module.core.outputs.ecs.task_execution_role_arn
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
-  memory                   = 512
-}
-
-resource "aws_service_discovery_service" "zookeeper" {
-  count    = var.zookeeper_ensemble_size
-  name     = "zookeeper-${count.index+1}"
-
-  dns_config {
-    namespace_id = module.core.outputs.vpc.service_discovery_dns_zone.id
-    dns_records {
-      ttl  = 10
-      type = "A"
-    }
-
-    routing_policy = "MULTIVALUE"
+  zookeeper_node = {
+    cluster_id             = aws_ecs_cluster.solrcloud.id
+    image                  = var.zookeeper_image
+    sidecar_image          = var.zookeeper_sidecar_image
+    zoo_servers            = join(" ", local.zookeeper_ensemble)
+    admin_auth             = "digest super:${var.default_zk_password}"
+    backup_bucket          = aws_s3_bucket.solr_backup.bucket
+    backup_interval        = 360
+    task_role_arn          = aws_iam_role.zookeeper_task_role.arn
+    execution_role_arn     = module.core.outputs.ecs.task_execution_role_arn
+    log_group              = aws_cloudwatch_log_group.solrcloud_logs.name
+    region                 = data.aws_region.current.region
+    subnet_ids             = module.core.outputs.vpc.private_subnets.ids
+    security_group_ids     = [aws_security_group.zookeeper_service.id]
+    discovery_namespace_id = module.core.outputs.vpc.service_discovery_dns_zone.id
   }
 }
 
-resource "aws_ecs_service" "zookeeper" {
-  count                  = var.zookeeper_ensemble_size
-  name                   = "zookeeper-${count.index}"
-  cluster                = aws_ecs_cluster.solrcloud.id
-  task_definition        = aws_ecs_task_definition.zookeeper[count.index].arn
-  desired_count          = 1
-  enable_execute_command = true
-  launch_type            = "FARGATE"
-  platform_version       = "1.4.0"
+# Each member waits for the previous one to reach steady state (healthy, part of a
+# serving quorum), so a rollout never takes more than one member down at a time.
+# Service names keep the original 0-based count index; ids and hostnames are 1-based.
 
-  lifecycle {
-    ignore_changes          = [desired_count]
-  }
+module "zookeeper_1" {
+  source       = "./zookeeper-node"
+  id           = 1
+  service_name = "zookeeper-0"
+  depends_on   = [aws_security_group_rule.zookeeper_peer_client_ingress]
 
-  network_configuration {
-    subnets          = module.core.outputs.vpc.private_subnets.ids
-    security_groups  = [aws_security_group.zookeeper_service.id]
-    assign_public_ip = false
-  }
+  cluster_id             = local.zookeeper_node.cluster_id
+  image                  = local.zookeeper_node.image
+  sidecar_image          = local.zookeeper_node.sidecar_image
+  zoo_servers            = local.zookeeper_node.zoo_servers
+  admin_auth             = local.zookeeper_node.admin_auth
+  backup_bucket          = local.zookeeper_node.backup_bucket
+  backup_interval        = local.zookeeper_node.backup_interval
+  task_role_arn          = local.zookeeper_node.task_role_arn
+  execution_role_arn     = local.zookeeper_node.execution_role_arn
+  log_group              = local.zookeeper_node.log_group
+  region                 = local.zookeeper_node.region
+  subnet_ids             = local.zookeeper_node.subnet_ids
+  security_group_ids     = local.zookeeper_node.security_group_ids
+  discovery_namespace_id = local.zookeeper_node.discovery_namespace_id
+}
 
-  service_registries {
-    registry_arn = aws_service_discovery_service.zookeeper[count.index].arn
-  }
+module "zookeeper_2" {
+  source       = "./zookeeper-node"
+  id           = 2
+  service_name = "zookeeper-1"
+  depends_on   = [module.zookeeper_1]
+
+  cluster_id             = local.zookeeper_node.cluster_id
+  image                  = local.zookeeper_node.image
+  sidecar_image          = local.zookeeper_node.sidecar_image
+  zoo_servers            = local.zookeeper_node.zoo_servers
+  admin_auth             = local.zookeeper_node.admin_auth
+  backup_bucket          = local.zookeeper_node.backup_bucket
+  backup_interval        = local.zookeeper_node.backup_interval
+  task_role_arn          = local.zookeeper_node.task_role_arn
+  execution_role_arn     = local.zookeeper_node.execution_role_arn
+  log_group              = local.zookeeper_node.log_group
+  region                 = local.zookeeper_node.region
+  subnet_ids             = local.zookeeper_node.subnet_ids
+  security_group_ids     = local.zookeeper_node.security_group_ids
+  discovery_namespace_id = local.zookeeper_node.discovery_namespace_id
+}
+
+module "zookeeper_3" {
+  source       = "./zookeeper-node"
+  id           = 3
+  service_name = "zookeeper-2"
+  depends_on   = [module.zookeeper_2]
+
+  cluster_id             = local.zookeeper_node.cluster_id
+  image                  = local.zookeeper_node.image
+  sidecar_image          = local.zookeeper_node.sidecar_image
+  zoo_servers            = local.zookeeper_node.zoo_servers
+  admin_auth             = local.zookeeper_node.admin_auth
+  backup_bucket          = local.zookeeper_node.backup_bucket
+  backup_interval        = local.zookeeper_node.backup_interval
+  task_role_arn          = local.zookeeper_node.task_role_arn
+  execution_role_arn     = local.zookeeper_node.execution_role_arn
+  log_group              = local.zookeeper_node.log_group
+  region                 = local.zookeeper_node.region
+  subnet_ids             = local.zookeeper_node.subnet_ids
+  security_group_ids     = local.zookeeper_node.security_group_ids
+  discovery_namespace_id = local.zookeeper_node.discovery_namespace_id
+}
+
+# From the original count-based resources. Moving the Cloud Map services in state (not
+# replacing them) matters: deregistering a running task's Cloud Map instance makes ECS
+# stop it (see DEPLOYMENT_UPDATE.md).
+
+moved {
+  from = aws_ecs_task_definition.zookeeper[0]
+  to   = module.zookeeper_1.aws_ecs_task_definition.this
+}
+moved {
+  from = aws_ecs_task_definition.zookeeper[1]
+  to   = module.zookeeper_2.aws_ecs_task_definition.this
+}
+moved {
+  from = aws_ecs_task_definition.zookeeper[2]
+  to   = module.zookeeper_3.aws_ecs_task_definition.this
+}
+moved {
+  from = aws_service_discovery_service.zookeeper[0]
+  to   = module.zookeeper_1.aws_service_discovery_service.this
+}
+moved {
+  from = aws_service_discovery_service.zookeeper[1]
+  to   = module.zookeeper_2.aws_service_discovery_service.this
+}
+moved {
+  from = aws_service_discovery_service.zookeeper[2]
+  to   = module.zookeeper_3.aws_service_discovery_service.this
+}
+moved {
+  from = aws_ecs_service.zookeeper[0]
+  to   = module.zookeeper_1.aws_ecs_service.this
+}
+moved {
+  from = aws_ecs_service.zookeeper[1]
+  to   = module.zookeeper_2.aws_ecs_service.this
+}
+moved {
+  from = aws_ecs_service.zookeeper[2]
+  to   = module.zookeeper_3.aws_ecs_service.this
 }

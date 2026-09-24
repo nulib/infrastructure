@@ -5,15 +5,9 @@ terraform {
 
   required_providers {
     aws = "~> 6.0"
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "4.5.0"
-    }
   }
   required_version = ">= 1.3.0"
 }
-
-data "aws_ecr_authorization_token" "registry" {}
 
 provider "aws" {
   default_tags {
@@ -21,11 +15,20 @@ provider "aws" {
   }
 }
 
-provider "docker" {
-  registry_auth {
-    address  = data.aws_ecr_authorization_token.registry.proxy_endpoint
-    username = data.aws_ecr_authorization_token.registry.user_name
-    password = data.aws_ecr_authorization_token.registry.password
+# The custom zookeeper image is gone (a stock image plus the zk-backup sidecar replaced
+# it). Forget its build resources without destroying anything: keep_remotely was already
+# set, and the pushed image stays in ECR.
+removed {
+  from = docker_image.zookeeper
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = docker_registry_image.zookeeper
+  lifecycle {
+    destroy = false
   }
 }
 
@@ -60,5 +63,5 @@ resource "aws_ecs_cluster" "solrcloud" {
 
 resource "aws_cloudwatch_log_group" "solrcloud_logs" {
   name                = "/ecs/solrcloud"
-  retention_in_days   = 3
+  retention_in_days   = 14
 }

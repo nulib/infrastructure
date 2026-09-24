@@ -1,0 +1,31 @@
+bash <<'EOF'
+SOLR="http://solr.internal.rdc-staging.library.northwestern.edu:8983/solr"
+declare -A TARGET=([arch]="10.1.5.97:8983_solr" [avr]="10.1.1.77:8983_solr") T0 DONE
+state() {
+  curl -sf -m 30 "$SOLR/admin/collections?action=CLUSTERSTATUS&collection=$1" \
+    | jq -r --arg c "$1" --arg n "$2" '[.cluster.collections[$c].shards[].replicas[] | select(.node_name == $n) | .state] | first // "missing"'
+}
+for c in "${!TARGET[@]}"; do
+  n=${TARGET[$c]}; s=$(state "$c" "$n")
+  if [[ -z $s ]]; then echo "Can't read CLUSTERSTATUS for $c from $SOLR"; exit 1; fi
+  if [[ $s != missing ]]; then echo "$c already has a replica on $n ($s); skipping"; DONE[$c]=skipped; continue; fi
+  T0[$c]=$(date +%s)
+  echo "$(date +%T) ADDREPLICA $c -> $n"
+  curl -sf -m 300 "$SOLR/admin/collections?action=ADDREPLICA&collection=$c&shard=shard1&node=$n&waitForFinalState=false" | jq -c '.responseHeader' \
+    || { echo "ADDREPLICA failed for $c"; DONE[$c]=failed; unset "T0[$c]"; }
+done
+while (( ${#DONE[@]} < ${#TARGET[@]} )); do
+  sleep 5
+  for c in "${!T0[@]}"; do
+    [[ -n ${DONE[$c]:-} ]] && continue
+    s=$(state "$c" "${TARGET[$c]}"); el=$(( $(date +%s) - T0[$c] ))
+    echo "$(date +%T) $c: ${s:-unreachable} (${el}s)"
+    case $s in
+      active)          DONE[$c]="${el}s" ;;
+      recovery_failed) DONE[$c]="FAILED after ${el}s" ;;
+      *)               (( el > 3600 )) && DONE[$c]="TIMED OUT after ${el}s" ;;
+    esac
+  done
+done
+echo "== Replication time"; for c in "${!DONE[@]}"; do echo "$c: ${DONE[$c]}"; done
+EOF
