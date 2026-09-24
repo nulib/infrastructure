@@ -415,6 +415,83 @@ resource "aws_wafv2_web_acl" "security_firewall" {
   }
 
   rule {
+    name     = "${local.namespace}-block-crawler-expensive-views"
+    priority = 91
+
+    action {
+      block {}
+    }
+
+    statement {
+      and_statement {
+        statement {
+          label_match_statement {
+            scope = "LABEL"
+            key   = "awswaf:managed:aws:bot-control:bot:verified"
+          }
+        }
+        statement {
+          or_statement {
+            dynamic "statement" {
+              for_each = toset(["view=masonry", "view=gallery", "view=slideshow"])
+              iterator = view_param
+              content {
+                byte_match_statement {
+                  positional_constraint = "CONTAINS"
+                  search_string         = view_param.key
+                  field_to_match {
+                    query_string {}
+                  }
+                  text_transformation {
+                    priority = 0
+                    type     = "URL_DECODE"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-block-crawler-expensive-views"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "${local.namespace}-rate-limit-search-crawlers"
+    priority = 92
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        aggregate_key_type    = "CONSTANT"
+        limit                 = 1500
+        evaluation_window_sec = 300
+
+        scope_down_statement {
+          label_match_statement {
+            scope = "LABEL"
+            key   = "awswaf:managed:aws:bot-control:bot:category:search_engine"
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.namespace}-rate-limit-search-crawlers"
+      sampled_requests_enabled   = true
+    }
+  }
+  
+  rule {
     name     = "${local.namespace}-high-traffic-ips"
     priority = 100
 
