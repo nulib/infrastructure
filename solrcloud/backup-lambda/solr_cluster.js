@@ -15,6 +15,27 @@ class SolrCluster {
     return await this.#request("CLUSTERSTATUS", params || {});
   }
 
+  // For each collection, the number of `active` replicas on live nodes in its weakest
+  // active shard. Collections in `expected` but missing from cluster state count as 0.
+  async liveReplicaCounts(expected = []) {
+    const { cluster } = await this.status();
+    const live = new Set(cluster.live_nodes || []);
+    const collections = cluster.collections || {};
+    const names = [...new Set([...expected, ...Object.keys(collections)])].sort();
+    const result = {};
+    for (const name of names) {
+      const counts = Object.values(collections[name]?.shards || {})
+        .filter((shard) => (shard.state || "active") === "active")
+        .map((shard) =>
+          Object.values(shard.replicas || {}).filter(
+            (r) => r.state === "active" && live.has(r.node_name)
+          ).length
+        );
+      result[name] = counts.length ? Math.min(...counts) : 0;
+    }
+    return result;
+  }
+
   async liveNodeCount() {
     const state = await this.status();
     return state.cluster.live_nodes.length;

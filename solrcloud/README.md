@@ -191,7 +191,27 @@ Invoke `<namespace>-solr-utils` with `{"operation": ...}`:
   replicas up to the replication factor (`expand: true` for every live node, or `node` to
   add one on a specific node). Never deletes a collection.
 * `solr:prune-dead` - only delete replicas on nodes that have left the cluster
+* `solr:metrics` - publish `SolrCloud/LiveReplicas` per collection (run every minute; see
+  [Monitoring](#monitoring))
 * `solr:ready` / `zookeeper:ready` - check that the live node count matches `solr.nodeCount` / `zookeeper.nodeCount`
+
+## Monitoring
+
+Defined in `monitoring.tf`. Every minute, EventBridge invokes the utility Lambda with
+`solr:metrics`. It publishes `SolrCloud/LiveReplicas` per collection, using CloudWatch
+embedded metric format in the Lambda's logs. The value is the number of `active` replicas
+on live nodes in the collection's weakest shard. An expected collection (`arch`, `avr`)
+that's missing from cluster state reports 0.
+
+| Alarm | Fires when |
+| --- | --- |
+| `<namespace>-solr-<collection>-no-live-replicas` | `LiveReplicas < 1` for 3 minutes, or no datapoints (Solr unreachable) |
+| `<namespace>-solr-<collection>-single-replica` | `LiveReplicas < 2` for 10 minutes |
+| `<namespace>-solr-join-skipped-shards` | a new Solr node's `join-cluster` sidecar logged `no live copy` |
+
+Alarms notify `alarm_topic_arn` when it's set, both on alarm and on recovery. Leave it
+unset (the default) to get no notifications, as in staging, whose scheduled scale-down
+would otherwise trip `no-live-replicas`.
 
 ## Outputs
 

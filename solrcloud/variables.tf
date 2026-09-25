@@ -61,3 +61,10 @@ variable "solr_sidecar_image" {
   type    = string
   default = "public.ecr.aws/docker/library/python:3-slim"
 }
+
+# SNS topic for SolrCloud alarms. Unset (the default), alarms change state but notify no
+# one; set it for production only.
+variable "alarm_topic_arn" {
+  type    = string
+  default = null
+}

@@ -50,6 +50,8 @@ const handler = async (event, _context) => {
       return await solrCluster.status(event.collection ? { collection: event.collection } : {});
     case "solr:prune-dead":
       return await solrPruneDead(event);
+    case "solr:metrics":
+      return await solrMetrics(event);
     case "zookeeper:ready":
       return await zkReady(event);
     case "set-log-level":
@@ -128,6 +130,49 @@ const solrPruneDead = async (event) => {
     const collections = Object.keys(state.cluster.collections);
     return await doMultiple(collections, action);
   }
+};
+
+// Publish SolrCloud/LiveReplicas per collection as CloudWatch Embedded Metric Format log
+// lines. Runs every minute; if Solr can't be reached no datapoints are written, and the
+// alarm treats the missing data as breaching. Errors are logged rather than thrown so an
+// outage (or staging's scheduled scale-down) doesn't report to Honeybadger every minute.
+const METRICS_TIMEOUT_MS = 20000;
+const solrMetrics = async (event) => {
+  let counts;
+  let timer;
+  try {
+    counts = await Promise.race([
+      solrCluster.liveReplicaCounts(event.collections || []),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("CLUSTERSTATUS timed out")), METRICS_TIMEOUT_MS);
+      })
+    ]);
+  } catch (err) {
+    console.error(`solr:metrics: ${err.message}`);
+    return { error: err.message };
+  } finally {
+    clearTimeout(timer);
+  }
+  const Timestamp = Date.now();
+  for (const [Collection, LiveReplicas] of Object.entries(counts)) {
+    console.log(
+      JSON.stringify({
+        _aws: {
+          Timestamp,
+          CloudWatchMetrics: [
+            {
+              Namespace: "SolrCloud",
+              Dimensions: [["Collection"]],
+              Metrics: [{ Name: "LiveReplicas", Unit: "Count" }]
+            }
+          ]
+        },
+        Collection,
+        LiveReplicas
+      })
+    );
+  }
+  return counts;
 };
 
 const doMultiple = async (collections, action) => {
