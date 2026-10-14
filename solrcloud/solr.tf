@@ -69,6 +69,7 @@ resource "aws_ecs_task_definition" "solr" {
       image               = var.solr_image
       essential           = true
       environment = [
+        { name = "SOLR_LOG_LEVEL",      value = "WARN" },
         { name = "SOLR_OPTS",           value = "-Dsolr.allowPaths=/data/backup -Ds3.bucket.name=${aws_s3_bucket.solr_backup.bucket} -Ds3.bucket.region=${data.aws_region.current.region}" },
         { name = "SOLR_HEAP",           value = "${var.solr_heap}m" },
         { name = "SOLR_MODE",           value = "solrcloud"  },

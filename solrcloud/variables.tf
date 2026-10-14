@@ -35,7 +35,7 @@ variable "zookeeper_sidecar_image" {
 
 variable "solr_image" {
   type    = string
-  default = "public.ecr.aws/docker/library/solr:9"
+  default = "public.ecr.aws/docker/library/solr:9.10"
 }
 
 variable "default_zk_password" {

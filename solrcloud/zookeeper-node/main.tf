@@ -21,6 +21,7 @@ resource "aws_ecs_task_definition" "this" {
       image     = var.image
       essential = true
       environment = [
+        { name = "JVMFLAGS",                   value = "-Dzookeeper.console.threshold=WARN" },
         { name = "ZOO_4LW_COMMANDS_WHITELIST", value = "*" },
         { name = "ZOO_INIT_LIMIT",             value = "30" },
         { name = "ZOO_MY_ID",                  value = tostring(var.id) },
