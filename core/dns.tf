@@ -1,3 +1,7 @@
+locals {
+  create_additional_zones = setsubtract(var.additional_environment_zones, [var.digital_collections_zone_name])
+}
+
 resource "aws_route53_zone" "hosted_zone" {
   name = var.hosted_zone_name
 }
@@ -40,4 +44,18 @@ resource "aws_route53_record" "dc_dns" {
   type    = "NS"
   ttl     = "900"
   records = aws_route53_zone.dc_zone[0].name_servers
+}
+
+# Additional created Route 53 zones for the environment
+
+resource "aws_route53_zone" "additional_zones" {
+  for_each = toset(local.create_additional_zones)
+  name     = each.value
+}
+
+module "extra_cert" {
+  for_each      = aws_route53_zone.additional_zones
+  source        = "./extra_cert"
+  zone_name     = each.value.name
+  zone_id       = each.value.id
 }

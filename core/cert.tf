@@ -5,7 +5,7 @@ locals {
         aws_route53_zone.hosted_zone.name, 
         aws_route53_zone.public_zone.name, 
         var.digital_collections_zone_name,
-        var.additional_environment_zones
+        setsubtract(var.additional_environment_zones, local.create_additional_zones)
       ]
     )
   )
@@ -46,3 +46,4 @@ resource "aws_route53_record" "wildcard_cert_validation" {
   records = [each.value.value]
   ttl     = 300
 }
+

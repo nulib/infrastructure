@@ -68,5 +68,11 @@ output "vpc" {
       id                = aws_service_discovery_private_dns_namespace.private_service_discovery.id
       name              = aws_service_discovery_private_dns_namespace.private_service_discovery.name
     }
+
+    additional_zones = { for k, v in aws_route53_zone.additional_zones : k => {
+      id                = v.id
+      name              = v.name
+      certificate_arn   = module.extra_cert[k].this_cert_arn
+    } }
   }
 }
