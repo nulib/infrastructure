@@ -33,8 +33,10 @@ variable "environment" {
 }
 
 variable "oidc_github_repositories" {
-  type    = list(string)
-  default = ["dc-api-v2"]
+  type    = map(list(string))
+  default = {
+    "nulib" = ["dc-api-v2"]
+  }
 }
 
 variable "public_subnets" {
