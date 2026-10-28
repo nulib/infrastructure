@@ -5,7 +5,9 @@ terraform {
 
   required_providers {
     aws = "~> 4.0"
+    github = "~> 6.13"
   }
+  
   required_version = ">= 1.3.0"
 }
 

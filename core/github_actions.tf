@@ -1,3 +1,31 @@
+locals {
+  repo_pairs = { for p in flatten([
+    for org, repos in var.oidc_github_repositories : [for r in repos : { org = org, repo = r }]
+  ]) : "${p.org}/${p.repo}" => p }
+}
+
+data "http" "org" {
+  for_each        = toset(keys(var.oidc_github_repositories))
+  url             = "https://api.github.com/orgs/${each.key}"
+  request_headers = { Accept = "application/vnd.github+json" }
+}
+
+data "github_repository" "repo" {
+  for_each  = local.repo_pairs
+  full_name = each.key
+}
+
+locals {
+  org_ids = { for org in keys(var.oidc_github_repositories) : org => jsondecode(data.http.org[org].response_body).id }
+
+  subs = flatten([
+    for key, p in local.repo_pairs : [
+      "repo:${p.org}/${p.repo}:*",
+      "repo:${p.org}@${local.org_ids[p.org]}/${p.repo}@${data.github_repository.repo[key].repo_id}:*",
+    ]
+  ])
+}
+
 data "aws_iam_policy_document" "assume_role" {
   statement {
     sid = "1"
@@ -17,11 +45,7 @@ data "aws_iam_policy_document" "assume_role" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
 
-      values = flatten([
-        for org, repos in var.oidc_github_repositories : [
-          for repo in repos : "repo:${org}/${repo}:*"
-        ]
-      ])
+      values = local.subs
     }
 
   }
