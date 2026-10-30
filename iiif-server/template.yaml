@@ -83,6 +83,8 @@ Resources:
             Resource:
               - !Sub "arn:aws:s3:::${SourceBucket}"
               - !Sub "arn:aws:s3:::${SourceBucket}/*"
+    Metadata:
+      BuildMethod: makefile
   ViewerRequestSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
